@@ -282,7 +282,17 @@
           <span class="w-2 h-2 rounded-full bg-rose-500"></span>
           <h2 class="text-xs font-bold text-stone-800 truncate">3. 원본 데이터 <span class="text-[11px] font-bold text-rose-600">[중간 원본]</span></h2>
         </div>
-        <span id="raw-char-count" class="text-[11px] text-stone-500 font-mono bg-stone-200 px-1 py-0.5 rounded">0 자</span>
+        <div class="flex items-center gap-1">
+          <!-- 3번 가로폭 빠른 조절 바 -->
+          <div class="flex items-center gap-0.5 bg-white/90 rounded px-1 py-0.2 border border-stone-300 text-[11px] shrink-0">
+            <span class="text-stone-400 mr-0.5"><i class="fa-solid fa-arrows-left-right text-[10px] text-rose-500"></i>폭:</span>
+            <button id="btn-p3-compact" class="px-1 py-0.2 rounded hover:bg-rose-100 text-stone-650 hover:text-rose-900 transition-colors font-mono text-[11px]" title="200px로 축소">200px</button>
+            <button id="btn-p3-normal" class="px-1 py-0.2 rounded hover:bg-rose-100 text-stone-650 hover:text-rose-900 transition-colors font-mono text-[11px]" title="280px 표준">280px</button>
+            <button id="btn-p3-wide" class="px-1 py-0.2 rounded hover:bg-rose-100 text-rose-700 hover:text-rose-900 font-bold transition-colors font-mono text-[11px]" title="380px 확장">380px</button>
+            <button id="btn-p3-max" class="px-1 py-0.2 rounded hover:bg-rose-100 text-rose-800 hover:text-rose-900 font-bold transition-colors text-[11px]" title="500px 최대화">최대화</button>
+          </div>
+          <span id="raw-char-count" class="text-[11px] text-stone-500 font-mono bg-stone-200 px-1 py-0.5 rounded">0 자</span>
+        </div>
       </div>
       <div class="px-2 py-1 bg-stone-100 border-b border-stone-200 text-xs text-stone-600 flex items-center justify-between shrink-0">
         <span class="truncate"><i class="fa-solid fa-file-lines text-amber-500 mr-1"></i>원본 데이터</span>

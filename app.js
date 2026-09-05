@@ -167,12 +167,13 @@ class BookEngine {
      2. 너비 조절 (Resizer) 및 프리셋 모드
   ---------------------------------------------------- */
   initResizers() {
-    const resizers = document.querySelectorAll('.col-resizer');
+    const resizers = document.querySelectorAll('.col-resizer, .zone-divider');
     resizers.forEach((resizer) => {
       resizer.addEventListener('mousedown', (e) => {
         e.preventDefault();
         const prevPanel = resizer.previousElementSibling;
         const nextPanel = resizer.nextElementSibling;
+        const isResizer3 = resizer.dataset.target === 'panel-3' || resizer.classList.contains('zone-divider');
         const isResizer5 = resizer.dataset.target === 'panel-5';
         const isResizer6 = resizer.dataset.target === 'panel-6';
 
@@ -188,10 +189,13 @@ class BookEngine {
         const onMouseMove = (moveEvent) => {
           const dx = moveEvent.clientX - startX;
 
-          if (isResizer5 && prevPanel && nextPanel) {
+          if (isResizer3) {
+            // 3열(중간 원본 데이터) 우측 분할선: 마우스 드래그로 3열 가로 사이즈 자유 조절 (160px ~ 900px)
+            const newP3 = Math.max(160, Math.min(950, startPrevWidth + dx));
+            prevPanel.style.width = newP3 + 'px';
+            prevPanel.style.flex = '0 0 ' + newP3 + 'px';
+          } else if (isResizer5 && prevPanel && nextPanel) {
             // 5열과 6열 사이 분할선: 마우스를 좌우로 드래그하여 5열과 6열의 폭을 실시간 상호 조절
-            // 좌측으로 드래그(dx < 0): 6열이 넓어지고 5열이 줄어듦
-            // 우측으로 드래그(dx > 0): 5열이 넓어지고 6열이 줄어듦
             const newP5 = Math.max(180, Math.min(850, startPrevWidth + dx));
             const newP6 = Math.max(260, Math.min(1100, startNextWidth - dx));
             prevPanel.style.width = newP5 + 'px';
@@ -200,8 +204,6 @@ class BookEngine {
             nextPanel.style.flex = '0 0 ' + newP6 + 'px';
           } else if (isResizer6 && prevPanel && nextPanel) {
             // 6열과 7열(자주 사용하는 기능) 사이 분할선
-            // 우측으로 드래그(dx > 0): 6열 확장, 7열 축소
-            // 좌측으로 드래그(dx < 0): 6열 축소, 7열 확장
             const newP6 = Math.max(260, Math.min(1100, startPrevWidth + dx));
             const newPTools = Math.max(160, Math.min(600, startNextWidth - dx));
             prevPanel.style.width = newP6 + 'px';
@@ -214,7 +216,7 @@ class BookEngine {
             prevPanel.style.width = newWidth + 'px';
             prevPanel.style.flex = '0 0 ' + newWidth + 'px';
           } else {
-            // 일반 분할선 (1, 2, 3, 4열)
+            // 일반 분할선 (1, 2, 4열)
             const newWidth = Math.max(130, Math.min(900, startPrevWidth + dx));
             prevPanel.style.width = newWidth + 'px';
             prevPanel.style.flex = '0 0 ' + newWidth + 'px';
@@ -415,6 +417,15 @@ class BookEngine {
     p6.style.flex = '0 0 ' + w + 'px';
     this.savePanelWidths();
     this.showToast(`6번 AI 스튜디오 가로폭이 ${w}px로 설정되었습니다.`);
+  }
+
+  setPanel3Width(w) {
+    const p3 = document.getElementById('panel-3');
+    if (!p3) return;
+    p3.style.width = w + 'px';
+    p3.style.flex = '0 0 ' + w + 'px';
+    this.savePanelWidths();
+    this.showToast(`3번 원본 데이터 가로폭이 ${w}px로 설정되었습니다.`);
   }
 
   /* ----------------------------------------------------
@@ -888,6 +899,12 @@ class BookEngine {
 
     // 워드 DOCX 다운로드
     document.getElementById('btn-download-docx')?.addEventListener('click', () => this.exportToWordDoc());
+
+    // 3열 원본 데이터 가로폭 빠른 조절 버튼들
+    document.getElementById('btn-p3-compact')?.addEventListener('click', () => this.setPanel3Width(200));
+    document.getElementById('btn-p3-normal')?.addEventListener('click', () => this.setPanel3Width(280));
+    document.getElementById('btn-p3-wide')?.addEventListener('click', () => this.setPanel3Width(380));
+    document.getElementById('btn-p3-max')?.addEventListener('click', () => this.setPanel3Width(500));
 
     // 6열 AI 스튜디오 가로폭 빠른 조절 버튼들
     document.getElementById('btn-p6-compact')?.addEventListener('click', () => this.setPanel6Width(340));
