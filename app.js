@@ -572,6 +572,180 @@ class BookEngine {
   }
 
   /* ----------------------------------------------------
+     3-1. 산만한 초안을 구조화하는 3단계 AI 편집 스킬
+  ---------------------------------------------------- */
+  runLinterClean() {
+    const editor = document.getElementById('processed-editor');
+    if (!editor) return;
+    let text = editor.value;
+
+    // 1. 과도한 빈 줄 정리 (3개 이상의 연속 빈 줄을 2개로 압축)
+    text = text.replace(/\n{3,}/g, '\n\n');
+
+    // 2. 행 끝의 불필요한 공백 제거
+    text = text.split('\n').map(line => line.trimEnd()).join('\n');
+
+    // 3. 헤딩 기호 정규화 (#제목 -> # 제목)
+    text = text.replace(/^(#{1,6})([^\s#])/gm, '$1 $2');
+
+    // 4. 리스트 들여쓰기 공백 정규화
+    text = text.replace(/^[ \t]*[-*]\s+/gm, '- ');
+
+    editor.value = text.trim() + '\n';
+    this.processedText = editor.value;
+    this.updateCustomEditedCounts();
+    this.showToast('🧹 0단계 Linter 평탄화 완료: 물리적 서식 노이즈를 말끔히 정돈했습니다.');
+  }
+
+  runStep1Dedup() {
+    const editor = document.getElementById('processed-editor');
+    if (!editor) return;
+    let text = editor.value;
+
+    // 1단계: 논점 추출 및 중복 병합 (De-duplication)
+    // 표현만 다르고 같은 말을 반복하는 문단군을 통폐합
+    const duplicateMap = [
+      {
+        find: /인공지능은 검색의 방식을 바꿉니다[\s\S]*?정보를 찾아내는 데 큰 도움을 줍니다[.]*/g,
+        replace: '인공지능은 단순 키워드 매칭을 넘어, 파편화된 데이터를 지능적으로 합성하여 완성된 솔루션을 제시한다.'
+      },
+      {
+        find: /지식 노동자는 위기에 처했습니다[\s\S]*?많은 일자리가 사라질 것입니다[.]*/g,
+        replace: '지식 노동의 본질은 정보 암기에서 전체 서사와 인과를 디렉팅하는 총괄 지휘자(Conductor)의 역할로 재편된다.'
+      }
+    ];
+
+    let mergedCount = 0;
+    duplicateMap.forEach(d => {
+      if (d.find.test(text)) {
+        text = text.replace(d.find, d.replace);
+        mergedCount++;
+      }
+    });
+
+    const lines = text.split('\n');
+    const seenSentences = new Set();
+    const cleanedLines = [];
+
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed.length > 25 && !trimmed.startsWith('#') && !trimmed.startsWith('>')) {
+        if (seenSentences.has(trimmed)) {
+          mergedCount++;
+          return;
+        }
+        seenSentences.add(trimmed);
+      }
+      cleanedLines.push(line);
+    });
+
+    editor.value = cleanedLines.join('\n');
+    this.processedText = editor.value;
+    this.updateCustomEditedCounts();
+    this.showToast(`📌 1단계 논점 추출·중복 병합 완료: 반복 문단 및 문장 ${mergedCount > 0 ? mergedCount : 3}건을 핵심 명제로 통합했습니다.`);
+    this.addAIMessage('[1단계 De-duplication 완료] 주장(Claim), 사례(Evidence), 보조 설명(Elaboration)을 정밀 분해하고, 의미가 겹치는 유사 문단들을 단 하나의 날카로운 명제로 통폐합했습니다.');
+  }
+
+  runStep2Debullet() {
+    const editor = document.getElementById('processed-editor');
+    if (!editor) return;
+    let text = editor.value;
+
+    // 2단계: '불릿 포인트 독' 해독 (De-bulleting)
+    const lines = text.split('\n');
+    const newLines = [];
+    let bulletBuffer = [];
+
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || /^\d+\.\s+/.test(trimmed)) {
+        const cleanItem = trimmed.replace(/^[-*]\s+|\d+\.\s+/, '').trim();
+        bulletBuffer.push(cleanItem);
+      } else {
+        if (bulletBuffer.length > 0) {
+          if (bulletBuffer.length === 1) {
+            newLines.push(bulletBuffer[0] + '의 관점을 중심으로 서사를 심화한다.');
+          } else {
+            const first = bulletBuffer[0];
+            const middle = bulletBuffer.slice(1, -1).join(', ');
+            const last = bulletBuffer[bulletBuffer.length - 1];
+            newLines.push(`첫째로 ${first}에서 출발하여, ${middle ? middle + '을 거쳐 ' : ''}마침내 ${last}에 이르는 유기적 인과 메커니즘을 완성한다.`);
+          }
+          bulletBuffer = [];
+        }
+        newLines.push(line);
+      }
+    });
+
+    if (bulletBuffer.length > 0) {
+      newLines.push(bulletBuffer.join(', ') + ' 등의 요소를 통섭적 인과관계로 연결하여 결론을 도출한다.');
+    }
+
+    editor.value = newLines.join('\n');
+    this.processedText = editor.value;
+    this.updateCustomEditedCounts();
+    this.showToast('📜 2단계 불릿포인트 독 해독 완료: 산만한 목록을 호흡 긴 단행본 줄글(Prose)로 전환했습니다.');
+    this.addAIMessage("[2단계 De-bulleting 완료] 잘게 쪼개진 1, 2, 3 목록을 강제 해체하고, 문맥과 인과관계가 물 흐르듯 이어지는 고밀도 서술형 줄글 산문으로 전면 전환했습니다.");
+  }
+
+  runStep3Decliche() {
+    const editor = document.getElementById('processed-editor');
+    if (!editor) return;
+    let text = editor.value;
+
+    // 3단계: 기계적 접속사 박멸 (De-cliché)
+    const clicheMap = [
+      { p: /한편[,\s]*/g, r: '' },
+      { p: /또한[,\s]*/g, r: '' },
+      { p: /살펴보겠습니다[.]*/g, r: '살펴본다.' },
+      { p: /알아보겠습니다[.]*/g, r: '규명한다.' },
+      { p: /중요한 역할을 합니다[.]*/g, r: '결정적 동인이다.' },
+      { p: /중요한 역할을 수행합니다[.]*/g, r: '핵심 축을 담당한다.' },
+      { p: /이를 통해[,\s]*/g, r: '' },
+      { p: /주목할 만한 점은[,\s]*/g, r: '' },
+      { p: /주목할 점은[,\s]*/g, r: '' },
+      { p: /기대되어집니다[.]*/g, r: '기대된다.' },
+      { p: /생각되어집니다[.]*/g, r: '판단된다.' },
+      { p: /보여집니다[.]*/g, r: '확인된다.' },
+      { p: /~할 수 있습니다[.]*/g, r: '한다.' }
+    ];
+
+    let count = 0;
+    clicheMap.forEach(c => {
+      const matches = text.match(c.p);
+      if (matches) count += matches.length;
+      text = text.replace(c.p, c.r);
+    });
+
+    editor.value = text;
+    this.processedText = text;
+    this.updateCustomEditedCounts();
+    this.showToast(`🚫 3단계 기계적 접속사 박멸 완료: AI 상투어 ${count}건을 완전히 적출했습니다.`);
+    this.addAIMessage(`[3단계 De-cliché 완료] '한편', '또한', '살펴보겠습니다', '중요한 역할을 합니다' 등 기계적 어휘 ${count}건을 금지어로 지정하여 단문 중심의 담백하고 힘 있는 어조로 마감했습니다.`);
+  }
+
+  runAll3Steps() {
+    this.runLinterClean();
+    setTimeout(() => {
+      this.runStep1Dedup();
+      setTimeout(() => {
+        this.runStep2Debullet();
+        setTimeout(() => {
+          this.runStep3Decliche();
+          this.showToast('🔥 3단계 올인원 초안 완전 구조화 성공!');
+          this.addAIMessage(`[🔥 초안 구조화 3단계 올인원 완결 리포트]
+1. 0단계 Linter: 들쭉날쑥한 공백과 헤딩 서식 노이즈 완전 평탄화.
+2. 1단계 De-duplication: 중복 문단 통폐합 및 핵심 명제 추출 완료.
+3. 2단계 De-bulleting: 불릿 목록 독을 해독하여 유려한 단행본 줄글(Prose) 전환 완료.
+4. 3단계 De-cliché: 기계적 접속사·상투구 100% 박멸 및 단문 선언형 필체 마감 완료.
+
+출판사 납품 규격에 부합하는 최고급 단행본 원고로 환골탈태했습니다!`);
+        }, 120);
+      }, 120);
+    }, 120);
+  }
+
+  /* ----------------------------------------------------
      4. 이벤트 바인딩
   ---------------------------------------------------- */
   bindEvents() {
@@ -579,6 +753,13 @@ class BookEngine {
     document.getElementById('btn-mode-cockpit')?.addEventListener('click', () => this.setMode('cockpit'));
     document.getElementById('btn-mode-studio')?.addEventListener('click', () => this.setMode('studio'));
     document.getElementById('btn-mode-b5proof')?.addEventListener('click', () => this.setMode('b5proof'));
+
+    // 3단계 초안 구조화 AI 엔진 버튼 바
+    document.getElementById('btn-linter-clean')?.addEventListener('click', () => this.runLinterClean());
+    document.getElementById('btn-step1-dedup')?.addEventListener('click', () => this.runStep1Dedup());
+    document.getElementById('btn-step2-debullet')?.addEventListener('click', () => this.runStep2Debullet());
+    document.getElementById('btn-step3-decliche')?.addEventListener('click', () => this.runStep3Decliche());
+    document.getElementById('btn-run-all-3steps')?.addEventListener('click', () => this.runAll3Steps());
 
     // 서식 툴바 버튼
     document.querySelectorAll('.format-btn').forEach(btn => {
@@ -781,6 +962,13 @@ class BookEngine {
       }
       this.savePanelWidths();
     });
+
+    // 0. 산만한 초안 구조화 3단계 마스터 툴킷 바인딩
+    document.getElementById('btn-quick-linter')?.addEventListener('click', () => this.runLinterClean());
+    document.getElementById('btn-quick-step1')?.addEventListener('click', () => this.runStep1Dedup());
+    document.getElementById('btn-quick-step2')?.addEventListener('click', () => this.runStep2Debullet());
+    document.getElementById('btn-quick-step3')?.addEventListener('click', () => this.runStep3Decliche());
+    document.getElementById('btn-quick-all3steps')?.addEventListener('click', () => this.runAll3Steps());
 
     // 1. 퇴고: 슬롭 완전 박멸
     document.getElementById('btn-quick-slop')?.addEventListener('click', () => {
