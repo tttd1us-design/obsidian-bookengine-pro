@@ -363,6 +363,30 @@ class BookEngine {
     document.getElementById('btn-download-md')?.addEventListener('click', () => this.downloadMarkdown());
     document.getElementById('btn-github-sync')?.addEventListener('click', () => this.syncToGitHub());
 
+    // 내 컴퓨터 폴더 저장 모달 리스너
+    document.getElementById('btn-open-save-folder-modal')?.addEventListener('click', () => this.openSaveFolderModal());
+    document.getElementById('btn-quick-save-folder')?.addEventListener('click', () => this.openSaveFolderModal());
+    document.getElementById('btn-close-folder-modal')?.addEventListener('click', () => this.closeSaveFolderModal());
+    document.getElementById('btn-cancel-folder-modal')?.addEventListener('click', () => this.closeSaveFolderModal());
+    document.getElementById('btn-browse-folder')?.addEventListener('click', () => this.browseLocalFolder());
+    document.getElementById('btn-execute-folder-save')?.addEventListener('click', () => this.executeLocalFolderSave());
+
+    document.querySelectorAll('.btn-preset-path').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const base = e.currentTarget.dataset.base;
+        const input = document.getElementById('input-folder-path');
+        const safeTitle = this.bookTitle.replace(/[『』\s:/\\]/g, '_').trim();
+        if (input) {
+          if (base === 'desktop') {
+            input.value = `C:\\Users\\tttd1\\Desktop\\${safeTitle}`;
+          } else {
+            input.value = `C:\\Users\\tttd1\\Documents\\Obsidian_Books\\${safeTitle}`;
+          }
+          this.showToast('저장 경로가 설정되었습니다.');
+        }
+      });
+    });
+
     document.getElementById('view-mode-text')?.addEventListener('click', () => this.switchViewMode('text'));
     document.getElementById('view-mode-styled')?.addEventListener('click', () => this.switchViewMode('styled'));
 
@@ -1341,6 +1365,129 @@ class BookEngine {
       if (syncBtn) {
         syncBtn.disabled = false;
         syncBtn.innerHTML = originalHtml;
+      }
+    }
+  }
+
+  /* ----------------------------------------------------
+     11. 내 컴퓨터 폴더 저장 (Local Folder Export)
+  ---------------------------------------------------- */
+  openSaveFolderModal() {
+    const modal = document.getElementById('save-folder-modal');
+    const input = document.getElementById('input-folder-path');
+    const status = document.getElementById('save-folder-status');
+    if (!modal) return;
+
+    const safeTitle = this.bookTitle.replace(/[『』\s:/\\]/g, '_').trim();
+    const defaultPath = `C:\\Users\\tttd1\\Documents\\Obsidian_Books\\${safeTitle}`;
+    if (input && (!input.value || input.value.includes('Obsidian_Books') || input.value.includes('Desktop'))) {
+      input.value = defaultPath;
+    }
+
+    if (status) {
+      status.innerHTML = '<i class="fa-solid fa-circle-info text-blue-600"></i>원하는 경로를 지정하고 [내 컴퓨터에 폴더 생성 & 저장 실행]을 누르세요.';
+      status.className = 'text-[11px] text-stone-500 font-medium flex items-center gap-1';
+    }
+
+    modal.classList.remove('hidden');
+  }
+
+  closeSaveFolderModal() {
+    const modal = document.getElementById('save-folder-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  async browseLocalFolder() {
+    const status = document.getElementById('save-folder-status');
+    if (status) status.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-500"></i>폴더 선택 창을 여는 중...';
+    try {
+      const res = await fetch('/api/browse-folder', { method: 'POST' });
+      const data = await res.json();
+      if (data.success && data.path) {
+        const input = document.getElementById('input-folder-path');
+        const safeTitle = this.bookTitle.replace(/[『』\s:/\\]/g, '_').trim();
+        if (input) input.value = `${data.path}\\${safeTitle}`;
+        if (status) status.innerHTML = `<i class="fa-solid fa-check text-emerald-500"></i>선택된 폴더: ${data.path}`;
+      } else {
+        if (status) status.innerHTML = '<i class="fa-solid fa-circle-info text-stone-400"></i>폴더 선택이 취소되었습니다.';
+      }
+    } catch (e) {
+      if (status) status.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-rose-500"></i>폴더 브라우징 오류: ' + e.message;
+    }
+  }
+
+  async executeLocalFolderSave() {
+    const input = document.getElementById('input-folder-path');
+    const chkOpen = document.getElementById('chk-open-explorer');
+    const status = document.getElementById('save-folder-status');
+    const btnExecute = document.getElementById('btn-execute-folder-save');
+
+    let folderPath = input ? input.value.trim() : '';
+    const openExplorer = chkOpen ? chkOpen.checked : true;
+
+    if (!this.processedText || !this.processedText.trim()) {
+      this.showToast('저장할 완성 원고 내용이 없습니다.');
+      return;
+    }
+
+    if (!folderPath) {
+      const safeTitle = this.bookTitle.replace(/[『』\s:/\\]/g, '_').trim();
+      folderPath = `C:\\Users\\tttd1\\Documents\\Obsidian_Books\\${safeTitle}`;
+    }
+
+    if (btnExecute) {
+      btnExecute.disabled = true;
+      btnExecute.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>폴더 생성 및 저장 중...</span>';
+    }
+    if (status) {
+      status.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-blue-500"></i>컴퓨터에 폴더를 생성하고 챕터별 마크다운을 분할 저장하고 있습니다...';
+      status.className = 'text-[11px] text-blue-600 font-semibold flex items-center gap-1';
+    }
+
+    try {
+      const response = await fetch('/api/save-to-local-folder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          folderPath: folderPath,
+          title: this.bookTitle,
+          planDoc: this.planDoc,
+          processedText: this.processedText,
+          workingSections: this.workingSections,
+          openExplorer: openExplorer,
+          qcMetrics: this.qcMetrics
+        })
+      });
+
+      const res = await response.json();
+      if (res.success) {
+        if (status) {
+          status.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-500"></i>저장 완료! (${res.files.length}개 파일 생성됨)`;
+          status.className = 'text-[11px] text-emerald-700 font-bold flex items-center gap-1';
+        }
+        this.showToast(`[${res.folderPath}] 폴더에 성공적으로 저장되었습니다!`);
+        this.addAIMessage(`【내 컴퓨터 폴더 저장 완료】\n• 저장 폴더: ${res.folderPath}\n• 생성 파일: 총 ${res.files.length}개\n  - 통합 완성원고: 00_출판사납품_전체완성원고.md\n  - 기획서: 00_완전집필기획서.md\n  - 옵시디언 볼트 분할: chapters/ 폴더 (${this.workingSections.length}개 챕터 개별 파일)\n  - 목차 분석표: 00_목차_및_구조분석표.md\n  - 품질 리포트: 출판품질검수_QC_리포트.txt\n\n옵시디언(Obsidian)에서 "Open folder as vault"로 해당 폴더를 열면 즉시 지식 그래프와 함께 집필하실 수 있습니다.`);
+
+        setTimeout(() => {
+          this.closeSaveFolderModal();
+        }, 1400);
+      } else {
+        if (status) {
+          status.innerHTML = '<i class="fa-solid fa-circle-xmark text-rose-500"></i>저장 실패: ' + (res.error || '알 수 없는 오류');
+          status.className = 'text-[11px] text-rose-600 font-semibold flex items-center gap-1';
+        }
+        this.showToast('폴더 저장 실패: ' + (res.error || '알 수 없는 오류'));
+      }
+    } catch (err) {
+      console.error(err);
+      if (status) {
+        status.innerHTML = '<i class="fa-solid fa-circle-xmark text-rose-500"></i>통신 오류: ' + err.message;
+      }
+      this.showToast('통신 오류: ' + err.message);
+    } finally {
+      if (btnExecute) {
+        btnExecute.disabled = false;
+        btnExecute.innerHTML = '<i class="fa-solid fa-floppy-disk"></i><span>내 컴퓨터에 폴더 생성 & 저장 실행</span>';
       }
     }
   }

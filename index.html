@@ -142,6 +142,12 @@
         <i class="fa-solid fa-download text-[10px]"></i>.MD 저장
       </button>
 
+      <!-- 내 컴퓨터 폴더 저장 -->
+      <button id="btn-open-save-folder-modal" class="px-2.5 py-1 text-xs rounded bg-blue-700 hover:bg-blue-600 text-white font-semibold transition-colors flex items-center gap-1.5 shadow-sm active:scale-95" title="내 컴퓨터의 원하는 폴더에 챕터별 분할 마크다운 및 옵시디언 볼트 패키지 저장">
+        <i class="fa-solid fa-folder-plus text-amber-300"></i>
+        <span>내 컴퓨터 폴더 저장</span>
+      </button>
+
       <!-- GitHub 원클릭 동기화 및 저장소 링크 -->
       <button id="btn-github-sync" class="px-2.5 py-1 text-xs rounded bg-stone-800 hover:bg-stone-700 text-emerald-400 border border-emerald-500/50 transition-colors flex items-center gap-1.5 font-medium shadow-sm active:scale-95" title="현재 완성원고를 GitHub 저장소에 자동 커밋 & 푸시">
         <i class="fa-brands fa-github text-emerald-400"></i>
@@ -584,9 +590,24 @@
 
         <!-- 저장 및 동기화 -->
         <div class="quick-card-group pt-2 border-t border-stone-800" data-group="sync">
-          <div class="text-[9px] font-bold text-emerald-400/90 uppercase tracking-wider mb-1 flex items-center gap-1">
-            <i class="fa-solid fa-cloud-arrow-up text-[8px]"></i> 4. 저장 & GitHub 백업
+          <div class="text-[9px] font-bold text-blue-400/90 uppercase tracking-wider mb-1 flex items-center gap-1">
+            <i class="fa-solid fa-folder-tree text-[8px]"></i> 4. 내 컴퓨터 저장 & 클라우드 백업
           </div>
+
+          <!-- 내 컴퓨터 폴더 저장 전용 대형 버튼 -->
+          <button id="btn-quick-save-folder" class="w-full p-2 mb-1.5 rounded-lg bg-blue-950/80 hover:bg-blue-900 border border-blue-600/70 text-blue-200 text-left transition-colors flex items-center justify-between group">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded bg-blue-900 border border-blue-500 text-amber-300 flex items-center justify-center shrink-0 text-xs group-hover:scale-110 transition-transform">
+                <i class="fa-solid fa-folder-plus"></i>
+              </div>
+              <div>
+                <div class="font-bold text-[11px] text-white">내 컴퓨터 폴더로 저장</div>
+                <div class="text-[8px] text-blue-300">통합원고 + 챕터별 개별 분할본 패키징</div>
+              </div>
+            </div>
+            <i class="fa-solid fa-chevron-right text-stone-400 group-hover:text-white text-xs mr-1"></i>
+          </button>
+
           <div class="grid grid-cols-2 gap-1.5">
             <button id="btn-quick-sync-git" class="p-2 rounded-lg bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-700/70 text-emerald-300 text-left transition-colors flex flex-col gap-1">
               <i class="fa-brands fa-github text-sm"></i>
@@ -683,6 +704,117 @@
       <div class="flex-1 overflow-y-auto p-6 md:p-12 bg-[#f4ede4] flex justify-center">
         <div id="modal-b5-content" class="bg-[#faf8f5] text-[#2c2a29] font-serif p-10 md:p-16 max-w-[800px] w-full shadow-2xl border border-[#e8e2d9] rounded-sm min-h-[1000px]"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- [내 컴퓨터 폴더로 별도 저장 모달] -->
+  <div id="save-folder-modal" class="hidden fixed inset-0 bg-black/75 backdrop-blur-xs z-50 flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl border border-stone-300 max-w-xl w-full flex flex-col overflow-hidden">
+      
+      <!-- 모달 헤더 -->
+      <div class="bg-gradient-to-r from-stone-900 via-stone-850 to-stone-900 text-white px-5 py-3.5 flex items-center justify-between border-b border-stone-700">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow">
+            <i class="fa-solid fa-folder-tree text-sm"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              내 컴퓨터에 폴더 생성 및 별도 저장
+              <span class="text-[9px] bg-blue-900/80 text-blue-300 border border-blue-700 px-1.5 py-0.2 rounded font-mono">옵시디언 볼트 완벽 호환</span>
+            </h3>
+            <p class="text-[10px] text-stone-400 mt-0.5">단일 완성원고 + 기획서 + 챕터별 개별 마크다운 파일 자동 분할 패키징</p>
+          </div>
+        </div>
+        <button id="btn-close-folder-modal" class="text-stone-400 hover:text-white text-base transition-colors p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- 모달 본문 -->
+      <div class="p-5 space-y-4 text-xs text-stone-700 bg-stone-50/50 max-h-[75vh] overflow-y-auto">
+        
+        <!-- 저장할 폴더 경로 지정 -->
+        <div class="bg-white p-3.5 rounded-xl border border-stone-200 shadow-xs space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="font-bold text-stone-900 text-xs flex items-center gap-1.5">
+              <i class="fa-solid fa-folder text-amber-600"></i>저장 대상 폴더 경로
+            </label>
+            <button id="btn-browse-folder" class="px-2 py-0.5 rounded bg-stone-100 hover:bg-stone-200 border border-stone-300 text-[10px] text-stone-700 font-medium flex items-center gap-1 transition-colors">
+              <i class="fa-regular fa-folder-open text-amber-600"></i>폴더 찾아보기...
+            </button>
+          </div>
+          
+          <div class="flex items-center gap-1.5">
+            <input type="text" id="input-folder-path" class="flex-1 p-2 rounded-lg border border-stone-300 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-xs text-stone-800 bg-stone-50" placeholder="C:\Users\tttd1\Documents\Obsidian_Books\도서명" />
+          </div>
+
+          <!-- 빠른 경로 추천 칩 -->
+          <div class="flex items-center gap-1.5 pt-1 text-[10px] text-stone-500 flex-wrap">
+            <span class="text-stone-400 mr-1"><i class="fa-solid fa-bolt text-amber-500 mr-0.5"></i>빠른 경로:</span>
+            <button class="btn-preset-path px-2 py-0.5 rounded bg-stone-100 hover:bg-blue-50 hover:text-blue-700 border border-stone-200" data-base="documents">
+              📁 내 문서\Obsidian_Books
+            </button>
+            <button class="btn-preset-path px-2 py-0.5 rounded bg-stone-100 hover:bg-blue-50 hover:text-blue-700 border border-stone-200" data-base="desktop">
+              🖥️ 바탕화면
+            </button>
+          </div>
+        </div>
+
+        <!-- 생성될 파일 패키지 안내 -->
+        <div class="bg-white p-3.5 rounded-xl border border-stone-200 shadow-xs space-y-2">
+          <h4 class="font-bold text-stone-900 text-xs flex items-center gap-1.5">
+            <i class="fa-solid fa-boxes-stacked text-blue-600"></i>자동 생성 및 패키징 목록
+          </h4>
+          <ul class="space-y-1.5 text-[11px] text-stone-600 pl-1 font-mono">
+            <li class="flex items-center justify-between p-1.5 bg-stone-50 rounded border border-stone-100">
+              <span class="flex items-center gap-1.5 text-stone-800 font-semibold"><i class="fa-solid fa-file-lines text-amber-600"></i>00_출판사납품_전체완성원고.md</span>
+              <span class="text-[9px] text-stone-400 font-sans">100% 통합 단행본 원고</span>
+            </li>
+            <li class="flex items-center justify-between p-1.5 bg-stone-50 rounded border border-stone-100">
+              <span class="flex items-center gap-1.5 text-stone-800 font-semibold"><i class="fa-solid fa-compass-drafting text-purple-600"></i>00_완전집필기획서.md</span>
+              <span class="text-[9px] text-stone-400 font-sans">B5 규격 & 4단계 인과 구조</span>
+            </li>
+            <li class="flex items-center justify-between p-1.5 bg-stone-50 rounded border border-stone-100">
+              <span class="flex items-center gap-1.5 text-blue-700 font-semibold"><i class="fa-solid fa-folder text-blue-600"></i>chapters/ (챕터별 분할 마크다운 폴더)</span>
+              <span class="text-[9px] text-blue-600 font-sans">옵시디언 볼트 즉시 열기 가능</span>
+            </li>
+            <li class="flex items-center justify-between p-1.5 bg-stone-50 rounded border border-stone-100">
+              <span class="flex items-center gap-1.5 text-stone-800 font-semibold"><i class="fa-solid fa-list-check text-emerald-600"></i>00_목차_및_구조분석표.md</span>
+              <span class="text-[9px] text-stone-400 font-sans">인과 단계별 위계표</span>
+            </li>
+            <li class="flex items-center justify-between p-1.5 bg-stone-50 rounded border border-stone-100">
+              <span class="flex items-center gap-1.5 text-stone-800 font-semibold"><i class="fa-solid fa-certificate text-rose-600"></i>출판품질검수_QC_리포트.txt</span>
+              <span class="text-[9px] text-stone-400 font-sans">B5 쪽수·글자수·슬롭 검증서</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- 옵션 -->
+        <div class="flex items-center justify-between px-1">
+          <label class="flex items-center gap-2 cursor-pointer text-[11px] text-stone-700 font-medium">
+            <input type="checkbox" id="chk-open-explorer" checked class="rounded text-blue-600 focus:ring-0 cursor-pointer" />
+            <span>저장 완료 후 윈도우 파일 탐색기(폴더) 자동 열기</span>
+          </label>
+        </div>
+
+      </div>
+
+      <!-- 모달 푸터 -->
+      <div class="bg-stone-100 px-5 py-3 border-t border-stone-200 flex items-center justify-between shrink-0">
+        <span id="save-folder-status" class="text-[11px] text-stone-500 font-medium flex items-center gap-1">
+          <i class="fa-solid fa-circle-info text-blue-600"></i>원하는 경로를 지정하고 저장 버튼을 누르세요.
+        </span>
+        <div class="flex items-center gap-2">
+          <button id="btn-cancel-folder-modal" class="px-3 py-1.5 rounded-lg border border-stone-300 hover:bg-stone-200 text-stone-700 text-xs font-medium transition-colors">
+            닫기
+          </button>
+          <button id="btn-execute-folder-save" class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md transition-transform active:scale-95 flex items-center gap-1.5">
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span>내 컴퓨터에 폴더 생성 & 저장 실행</span>
+          </button>
+        </div>
+      </div>
+
     </div>
   </div>
 
