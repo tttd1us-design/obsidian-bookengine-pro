@@ -101,45 +101,48 @@
       </div>
     </div>
 
-    <!-- 뷰 프리셋 및 액션 컨트롤 -->
-    <div class="flex items-center gap-1.5">
-      <div class="flex items-center bg-stone-800 rounded-lg p-0.5 border border-stone-700 mr-1 text-[11px]">
-        <button id="view-preset-balanced" class="px-2 py-0.5 rounded text-stone-300 hover:text-white transition-colors" title="표준 균등 분할">
-          <i class="fa-solid fa-table-columns mr-1"></i>표준뷰
+    <!-- 3단계 적응형 뷰포트 셀렉터 (관제탑 / 집필 스튜디오 / B5 실물 조판) -->
+    <div class="flex items-center gap-2">
+      <div class="flex items-center bg-stone-950 p-1 rounded-xl border border-stone-700/90 shadow-inner mr-1 text-xs">
+        <button id="btn-mode-cockpit" class="px-2.5 py-1 rounded-lg text-stone-400 hover:text-white transition-all flex items-center gap-1.5" title="1~7열 전체 파이프라인 관제탑 (넓은 화면용)">
+          <i class="fa-solid fa-table-columns text-[10px]"></i>
+          <span class="font-medium">전체 관제탑 (7단)</span>
         </button>
-        <button id="view-preset-focus-edit" class="px-2 py-0.5 rounded bg-amber-600 text-white font-semibold shadow" title="4,5,6 집필·편집·AI 집중 뷰">
-          <i class="fa-solid fa-pen-nib mr-1"></i>집필·AI 집중뷰
+        <button id="btn-mode-studio" class="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold shadow-md ring-1 ring-amber-400/50 flex items-center gap-1.5 transition-all" title="4, 5, 6열 집중 스튜디오 (눈 편하고 널찍한 황금 집필 환경)">
+          <i class="fa-solid fa-feather-pointed text-[10px]"></i>
+          <span>집필 스튜디오 (3단 집중)</span>
         </button>
-        <button id="view-preset-fullscreen-ai" class="px-2 py-0.5 rounded text-stone-300 hover:text-white transition-colors" title="6열 AI 채팅창 극대화">
-          <i class="fa-solid fa-robot mr-1"></i>AI 확장뷰
+        <button id="btn-mode-b5proof" class="px-2.5 py-1 rounded-lg text-stone-400 hover:text-white transition-all flex items-center gap-1.5" title="신국판 B5 (182×257mm) 실물 종이책 조판 뷰어">
+          <i class="fa-solid fa-book-open text-[10px]"></i>
+          <span class="font-medium">실물 B5 조판</span>
         </button>
       </div>
 
       <!-- 원본 파일 넣기 -->
       <label class="cursor-pointer px-2.5 py-1 text-xs rounded bg-stone-800 hover:bg-stone-700 text-amber-400 border border-amber-500/50 transition-colors flex items-center gap-1.5 font-medium shadow-sm">
         <i class="fa-solid fa-file-arrow-up text-amber-500"></i>
-        <span>원본파일 열기 (자동분석)</span>
+        <span>원본파일 열기</span>
         <input type="file" id="file-upload" accept=".md,.txt" class="hidden" />
       </label>
 
       <!-- 샘플 로드 -->
       <button id="btn-load-sample" class="px-2 py-1 text-xs rounded bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-700 transition-colors flex items-center gap-1">
-        <i class="fa-solid fa-rotate-left text-stone-400 text-[10px]"></i>샘플 로드
+        <i class="fa-solid fa-rotate-left text-stone-400 text-[10px]"></i>샘플
       </button>
 
       <!-- 원클릭 정제 -->
-      <button id="btn-refactor" class="px-3 py-1 text-xs font-semibold rounded bg-amber-600 hover:bg-amber-500 text-white shadow transition-transform active:scale-95 flex items-center gap-1.5">
-        <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>원클릭 자동 재배치 & 정제
+      <button id="btn-refactor" class="px-2.5 py-1 text-xs font-semibold rounded bg-amber-600 hover:bg-amber-500 text-white shadow transition-transform active:scale-95 flex items-center gap-1">
+        <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>자동 정제
       </button>
 
-      <!-- B5 조판 -->
-      <button id="btn-open-b5" class="px-2 py-1 text-xs rounded bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-700 transition-colors flex items-center gap-1">
-        <i class="fa-solid fa-book-bookmark text-[10px]"></i>신국판 B5 조판
+      <!-- 워드(DOCX) 내보내기 -->
+      <button id="btn-download-docx" class="px-2.5 py-1 text-xs rounded bg-blue-900/90 hover:bg-blue-800 text-blue-200 border border-blue-600 transition-colors flex items-center gap-1 shadow-sm font-semibold" title="출판사용 워드(.doc/.docx) 문서로 다운로드">
+        <i class="fa-solid fa-file-word text-blue-300 text-[10px]"></i>워드(DOCX)
       </button>
 
-      <!-- 다운로드 -->
+      <!-- .MD 다운로드 -->
       <button id="btn-download-md" class="px-2 py-1 text-xs rounded bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-700 transition-colors flex items-center gap-1">
-        <i class="fa-solid fa-download text-[10px]"></i>.MD 저장
+        <i class="fa-solid fa-download text-[10px]"></i>.MD
       </button>
 
       <!-- 내 컴퓨터 폴더 저장 -->
@@ -151,10 +154,10 @@
       <!-- GitHub 원클릭 동기화 및 저장소 링크 -->
       <button id="btn-github-sync" class="px-2.5 py-1 text-xs rounded bg-stone-800 hover:bg-stone-700 text-emerald-400 border border-emerald-500/50 transition-colors flex items-center gap-1.5 font-medium shadow-sm active:scale-95" title="현재 완성원고를 GitHub 저장소에 자동 커밋 & 푸시">
         <i class="fa-brands fa-github text-emerald-400"></i>
-        <span>GitHub 동기화</span>
+        <span>GitHub</span>
       </button>
       <a href="https://github.com/tttd1us-design/obsidian-bookengine-pro" target="_blank" class="px-2 py-1 text-xs rounded bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-700 transition-colors flex items-center gap-1" title="GitHub 원격 저장소 페이지 열기">
-        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>저장소
+        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
       </a>
     </div>
   </header>
@@ -282,26 +285,85 @@
           <span id="qc-score-badge" class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">자유 편집</span>
         </div>
       </div>
-      <!-- 에디터 툴바 -->
-      <div class="px-2 py-1 bg-amber-50/40 border-b border-amber-200/70 text-[10px] flex items-center justify-between shrink-0">
-        <div class="flex items-center gap-2 text-stone-600">
-          <button id="view-mode-text" class="font-bold text-amber-800 border-b-2 border-amber-600 pb-0.5 flex items-center gap-1">
-            <i class="fa-solid fa-pen-nib text-[9px]"></i>원고 작성·퇴고
+      <!-- 상단 1: 뷰 모드 및 메트릭스 -->
+      <div class="px-2.5 py-1 bg-amber-50/40 border-b border-amber-200/70 text-[10px] flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-1 bg-amber-100/70 p-0.5 rounded-lg border border-amber-200">
+          <button id="view-mode-text" class="px-2 py-0.5 rounded font-bold text-amber-900 bg-white shadow-xs flex items-center gap-1 text-[10px]">
+            <i class="fa-solid fa-pen-nib text-[9px] text-amber-700"></i>원고 에디터
           </button>
-          <button id="view-mode-styled" class="text-stone-500 hover:text-stone-800 pb-0.5 flex items-center gap-1">
-            <i class="fa-solid fa-newspaper text-[9px]"></i>B5 조판 뷰
+          <button id="view-mode-styled" class="px-2 py-0.5 rounded text-stone-600 hover:text-stone-900 flex items-center gap-1 text-[10px] transition-colors">
+            <i class="fa-solid fa-book-open text-[9px] text-amber-700"></i>B5 조판 프리뷰
           </button>
         </div>
         <div class="flex items-center gap-2 text-[9px] text-stone-500 font-medium shrink-0">
-          <span>슬롭: <b id="mini-qc-slop" class="text-rose-700 font-bold">0건</b></span>
+          <span>AI 슬롭: <b id="mini-qc-slop" class="text-rose-700 font-bold">0건</b></span>
           <span>·</span>
           <span>예상 쪽수: <b id="mini-qc-pages" class="text-amber-800 font-bold font-mono">0쪽</b></span>
         </div>
       </div>
+
+      <!-- 상단 2: [리치 서식 툴바] (마크다운 및 단행본 박스 삽입) -->
+      <div id="editor-toolbar" class="px-2 py-1 bg-white border-b border-stone-200 flex items-center gap-1 text-[11px] overflow-x-auto shrink-0">
+        <div class="flex items-center gap-0.5 border-r border-stone-200 pr-1.5 shrink-0">
+          <button type="button" class="format-btn px-1.5 py-0.5 rounded hover:bg-stone-100 text-stone-700 font-bold text-[10px]" data-format="h1" title="대제목 H1 (# )">H1</button>
+          <button type="button" class="format-btn px-1.5 py-0.5 rounded hover:bg-stone-100 text-stone-700 font-bold text-[10px]" data-format="h2" title="중제목 H2 (## )">H2</button>
+          <button type="button" class="format-btn px-1.5 py-0.5 rounded hover:bg-stone-100 text-stone-700 font-bold text-[10px]" data-format="h3" title="소제목 H3 (### )">H3</button>
+        </div>
+        <div class="flex items-center gap-0.5 border-r border-stone-200 pr-1.5 shrink-0">
+          <button type="button" class="format-btn w-6 h-6 rounded hover:bg-stone-100 text-stone-700 font-bold flex items-center justify-center text-[10px]" data-format="bold" title="굵게 (**텍스트**)">
+            <i class="fa-solid fa-bold"></i>
+          </button>
+          <button type="button" class="format-btn w-6 h-6 rounded hover:bg-stone-100 text-stone-700 italic flex items-center justify-center text-[10px]" data-format="italic" title="기울임 (*텍스트*)">
+            <i class="fa-solid fa-italic"></i>
+          </button>
+          <button type="button" class="format-btn w-6 h-6 rounded hover:bg-stone-100 text-stone-700 flex items-center justify-center text-[10px]" data-format="quote" title="인용구 (> )">
+            <i class="fa-solid fa-quote-left"></i>
+          </button>
+          <button type="button" class="format-btn w-6 h-6 rounded hover:bg-stone-100 text-stone-700 flex items-center justify-center text-[10px]" data-format="bullet" title="불릿 목록 (- )">
+            <i class="fa-solid fa-list-ul"></i>
+          </button>
+        </div>
+        <div class="flex items-center gap-1 shrink-0">
+          <button type="button" class="format-btn px-1.5 py-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-[9px] font-semibold flex items-center gap-1" data-format="box-summary" title="3분 요약 테이크어웨이 박스 삽입">
+            <i class="fa-solid fa-box-archive text-amber-600 text-[8px]"></i>3분요약
+          </button>
+          <button type="button" class="format-btn px-1.5 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-[9px] font-semibold flex items-center gap-1" data-format="box-case" title="실제 기업 실증 수치 사례 상자 삽입">
+            <i class="fa-solid fa-chart-line text-blue-600 text-[8px]"></i>실증사례
+          </button>
+          <button type="button" class="format-btn px-1.5 py-0.5 rounded bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 text-[9px] font-semibold flex items-center gap-1" data-format="box-defense" title="전문가 반론 사전 방어 상자 삽입">
+            <i class="fa-solid fa-shield-halved text-purple-600 text-[8px]"></i>반론방어
+          </button>
+        </div>
+      </div>
+
+      <!-- 상단 3: [원클릭 AI 수술칼 윤문 바] (편집 마찰 제로화) -->
+      <div class="px-2 py-1 bg-stone-900 text-white border-b border-stone-800 flex items-center justify-between text-[10px] shrink-0">
+        <div class="flex items-center gap-1 overflow-x-auto">
+          <span class="text-amber-400 font-bold text-[9px] mr-1 flex items-center gap-1 shrink-0">
+            <i class="fa-solid fa-wand-magic-sparkles text-[9px]"></i>AI 수술칼:
+          </span>
+          <button id="btn-surgical-anti-slop" class="px-2 py-0.5 rounded bg-stone-800 hover:bg-rose-900/80 text-rose-300 hover:text-white border border-rose-700/60 font-medium transition-all shrink-0 flex items-center gap-1" title="본문 전체에서 불필요한 미사여구, 피동태, AI 슬롭을 단 1초 만에 박멸">
+            <i class="fa-solid fa-broom text-[8px]"></i>슬롭 살균
+          </button>
+          <button id="btn-surgical-evidence" class="px-2 py-0.5 rounded bg-stone-800 hover:bg-blue-900/80 text-blue-300 hover:text-white border border-blue-700/60 font-medium transition-all shrink-0 flex items-center gap-1" title="본문 단락에 실제 기업 통계와 실증 데이터를 자동 보강">
+            <i class="fa-solid fa-chart-pie text-[8px]"></i>통계 보강
+          </button>
+          <button id="btn-surgical-gladwell" class="px-2 py-0.5 rounded bg-stone-800 hover:bg-amber-900/80 text-amber-300 hover:text-white border border-amber-700/60 font-medium transition-all shrink-0 flex items-center gap-1" title="말콤 글래드웰·레이 달리오 스타일의 단문 선언형 필체로 전환">
+            <i class="fa-solid fa-feather text-[8px]"></i>거장 문체
+          </button>
+          <button id="btn-surgical-prose" class="px-2 py-0.5 rounded bg-stone-800 hover:bg-purple-900/80 text-purple-300 hover:text-white border border-purple-700/60 font-medium transition-all shrink-0 flex items-center gap-1" title="불릿 목록 기호를 유려한 단행본 서술 산문으로 자동 전환">
+            <i class="fa-solid fa-align-left text-[8px]"></i>산문화
+          </button>
+        </div>
+        <span class="text-[8px] text-stone-400 shrink-0 font-mono hidden sm:inline">원클릭 즉시적용</span>
+      </div>
+
       <!-- 완성 텍스트 에디터 -->
-      <textarea id="processed-editor" spellcheck="false" placeholder="출판사용 원고를 자유롭게 작성하고 수정하세요..." class="flex-1 p-3 text-xs font-mono leading-relaxed resize-none focus:outline-none focus:ring-1 focus:ring-amber-500 text-stone-900 bg-white overflow-y-auto"></textarea>
+      <textarea id="processed-editor" spellcheck="false" placeholder="출판사용 원고를 자유롭게 작성하고 수정하세요... 상단 서식 툴바나 AI 수술칼을 누르면 즉시 문장이 고품질로 변환됩니다." class="flex-1 p-4 text-xs font-mono leading-relaxed resize-none focus:outline-none focus:ring-1 focus:ring-amber-500 text-stone-900 bg-white overflow-y-auto"></textarea>
+      
       <!-- B5 조판 스타일 뷰 -->
-      <div id="processed-styled-view" class="hidden flex-1 p-4 overflow-y-auto bg-[#faf8f5] text-[#2c2a29] font-serif border-t border-stone-200 leading-relaxed text-justify text-xs"></div>
+      <div id="processed-styled-view" class="hidden flex-1 p-6 overflow-y-auto bg-[#faf8f5] text-[#2c2a29] font-serif border-t border-stone-200 leading-relaxed text-justify text-xs shadow-inner"></div>
+      
       <div class="px-2.5 py-1 bg-amber-50/60 border-t border-amber-200 text-[9px] text-stone-600 flex items-center justify-between shrink-0">
         <span>완성 글자수: <b id="mini-qc-chars" class="text-stone-800 font-mono font-bold">0 자</b></span>
         <span class="text-emerald-700 font-semibold"><i class="fa-solid fa-check mr-1"></i>실시간 자동 동기화</span>

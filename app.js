@@ -58,6 +58,8 @@ class BookEngine {
     this.initResizers();
     this.loadPanelWidths();
     this.analyzeManuscriptAndPopulate(this.rawText, false);
+    // 기본 모드를 널찍하고 눈 편한 3단 집필 스튜디오 모드로 활성화
+    this.setMode('studio');
   }
 
   /* ----------------------------------------------------
@@ -256,31 +258,77 @@ class BookEngine {
     if (save) this.savePanelWidths();
   }
 
-  setPreset(presetType) {
-    const btnBalanced = document.getElementById('view-preset-balanced');
-    const btnFocus = document.getElementById('view-preset-focus-edit');
-    const btnFullscreenAI = document.getElementById('view-preset-fullscreen-ai');
+  setMode(mode) {
+    this.currentMode = mode;
+    const btnCockpit = document.getElementById('btn-mode-cockpit');
+    const btnStudio = document.getElementById('btn-mode-studio');
+    const btnB5Proof = document.getElementById('btn-mode-b5proof');
 
-    const defaultBtnClass = 'px-2 py-0.5 rounded text-stone-300 hover:text-white transition-colors';
-    const activeBtnClass = 'px-2 py-0.5 rounded bg-amber-600 text-white font-semibold shadow';
+    const defaultBtnClass = 'px-2.5 py-1 rounded-lg text-stone-400 hover:text-white transition-all flex items-center gap-1.5';
+    const activeBtnClass = 'px-3 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold shadow-md ring-1 ring-amber-400/50 flex items-center gap-1.5 transition-all';
 
-    [btnBalanced, btnFocus, btnFullscreenAI].forEach(b => {
+    [btnCockpit, btnStudio, btnB5Proof].forEach(b => {
       if (b) b.className = defaultBtnClass;
     });
 
-    if (presetType === 'balanced') {
-      if (btnBalanced) btnBalanced.className = activeBtnClass;
-      this.applyWidths([180, 150, 200, 200, 340, 380, 290]);
-      this.showToast('표준 균형 뷰(7개 구역 표준 배분)로 전환되었습니다.');
-    } else if (presetType === 'focus-edit') {
-      if (btnFocus) btnFocus.className = activeBtnClass;
-      this.applyWidths([140, 130, 160, 210, 440, 420, 290]);
-      this.showToast('집필·AI 집중 뷰(4, 5, 6열 작업 구역 극대화)로 전환되었습니다.');
-    } else if (presetType === 'fullscreen-ai') {
-      if (btnFullscreenAI) btnFullscreenAI.className = activeBtnClass;
-      this.applyWidths([130, 120, 140, 160, 320, 620, 290]);
-      this.showToast('AI 수석편집장 확장 뷰(AI 스튜디오 최대화)로 전환되었습니다.');
+    const p1 = document.getElementById('panel-1');
+    const p2 = document.getElementById('panel-2');
+    const p3 = document.getElementById('panel-3');
+    const r1 = document.querySelector('.col-resizer[data-target="panel-1"]');
+    const r2 = document.querySelector('.col-resizer[data-target="panel-2"]');
+    const zoneDiv = document.querySelector('.zone-divider');
+    const p4 = document.getElementById('panel-4');
+    const p5 = document.getElementById('panel-5');
+    const p6 = document.getElementById('panel-6');
+    const p7 = document.getElementById('panel-quick-tools');
+
+    if (mode === 'studio') {
+      if (btnStudio) btnStudio.className = activeBtnClass;
+      // 1, 2, 3열 및 경계선 숨김 -> 눈 편한 3단 집중 집필
+      [p1, p2, p3, r1, r2, zoneDiv].forEach(el => {
+        if (el) el.style.display = 'none';
+      });
+      if (p4) {
+        p4.style.display = 'flex';
+        p4.style.width = '240px';
+        p4.style.flex = '0 0 240px';
+      }
+      if (p5) {
+        p5.style.display = 'flex';
+        p5.style.flex = '1 1 0%';
+        p5.style.width = 'auto';
+        p5.style.minWidth = '520px';
+      }
+      if (p6) {
+        p6.style.display = 'flex';
+        p6.style.width = '420px';
+        p6.style.flex = '0 0 420px';
+      }
+      if (p7) {
+        p7.style.display = 'flex';
+        p7.style.width = '280px';
+        p7.style.flex = '0 0 280px';
+      }
+      this.showToast('✍️ 집필 스튜디오 모드: 1~3열을 접고 널찍한 황금 집필 공간을 확보했습니다.');
+    } else if (mode === 'cockpit') {
+      if (btnCockpit) btnCockpit.className = activeBtnClass;
+      // 1~7열 모두 표시
+      [p1, p2, p3, r1, r2, zoneDiv].forEach(el => {
+        if (el) el.style.display = '';
+      });
+      this.applyWidths([180, 160, 200, 220, 380, 420, 280]);
+      this.showToast('🖥️ 전체 관제탑 모드: 1~7열 전체 파이프라인을 조망합니다.');
+    } else if (mode === 'b5proof') {
+      if (btnB5Proof) btnB5Proof.className = activeBtnClass;
+      this.openB5Modal();
+      this.showToast('📖 신국판 B5 출판사 제출용 실물 조판 뷰어를 호출했습니다.');
     }
+  }
+
+  setPreset(presetType) {
+    if (presetType === 'focus-edit') this.setMode('studio');
+    else if (presetType === 'balanced') this.setMode('cockpit');
+    else if (presetType === 'fullscreen-ai') this.setPanel6Width(720);
   }
 
   setPanel6Width(w) {
@@ -293,12 +341,261 @@ class BookEngine {
   }
 
   /* ----------------------------------------------------
-     3. 이벤트 바인딩
+     3. 서식 툴바 및 인라인 AI 수술칼 윤문 도구
+  ---------------------------------------------------- */
+  applyFormatting(type) {
+    const editor = document.getElementById('processed-editor');
+    if (!editor) return;
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const val = editor.value;
+    const selected = val.substring(start, end);
+
+    let replacement = '';
+    switch (type) {
+      case 'h1':
+        replacement = '\n# ' + (selected || '새로운 챕터 제목') + '\n';
+        break;
+      case 'h2':
+        replacement = '\n## ' + (selected || '새로운 소제목') + '\n';
+        break;
+      case 'h3':
+        replacement = '\n### ' + (selected || '상세 절 제목') + '\n';
+        break;
+      case 'bold':
+        replacement = '**' + (selected || '강조 텍스트') + '**';
+        break;
+      case 'italic':
+        replacement = '*' + (selected || '기울임 텍스트') + '*';
+        break;
+      case 'quote':
+        replacement = '\n> ' + (selected || '핵심 인용문') + '\n';
+        break;
+      case 'bullet':
+        replacement = '\n- ' + (selected || '목록 항목') + '\n';
+        break;
+      case 'box-summary':
+        replacement = '\n> ### 💡 [3분 핵심 테이크어웨이]\n> - **핵심 명제**: ' + (selected || '이 챕터가 전달하는 가장 중요한 본질적 결론') + '\n> - **실행 원칙**: 현업에 즉각 적용 가능한 3대 행동 지침\n> - **기대 효과**: 작업 생산성 70% 향상 및 판단 오류 제로화\n\n';
+        break;
+      case 'box-case':
+        replacement = '\n> ### 📊 [실증 수치 사례] 글로벌 혁신 벤치마크\n> - **분석 대상**: 포춘 500대 IT 및 금융 기업 120개사\n> - **검증 수치**: 업무 완결 시간 74.2% 단축, 할루시네이션 오류 89% 차단\n> - **시사점**: 직관적 추측을 배제하고 인과 프레임워크를 적용한 결과\n\n';
+        break;
+      case 'box-defense':
+        replacement = '\n> ### 🛡️ [전문가 반론 방어 논리]\n> - **예상 반론**: ' + (selected || '자동화 도구가 인간의 깊이 있는 통찰을 대체할 수 있는가?') + '\n> - **선제적 방어**: 도구는 자료 수집과 정리를 가속화할 뿐, 고유한 문제의식과 가치 판단을 내리는 주체는 여전히 인간 총괄 디렉터이다.\n\n';
+        break;
+      default:
+        return;
+    }
+
+    editor.value = val.substring(0, start) + replacement + val.substring(end);
+    this.processedText = editor.value;
+    editor.focus();
+    editor.setSelectionRange(start + replacement.length, start + replacement.length);
+    this.updateCustomEditedCounts();
+    this.showToast('서식이 본문에 적용되었습니다.');
+  }
+
+  applySurgicalAntiSlop() {
+    const editor = document.getElementById('processed-editor');
+    if (!editor) return;
+    let text = editor.value;
+
+    const replacements = [
+      { pattern: /이를 통해[,\s]*/g, replace: '' },
+      { pattern: /주목할 만한 점은[,\s]*/g, replace: '' },
+      { pattern: /주목할 점은[,\s]*/g, replace: '' },
+      { pattern: /또한[,\s]*/g, replace: '' },
+      { pattern: /살펴보겠습니다[.]*/g, replace: '살펴본다.' },
+      { pattern: /알아보겠습니다[.]*/g, replace: '분석한다.' },
+      { pattern: /기대되어집니다[.]*/g, replace: '기대된다.' },
+      { pattern: /생각되어집니다[.]*/g, replace: '판단된다.' },
+      { pattern: /보여집니다[.]*/g, replace: '나타난다.' },
+      { pattern: /다양한 관점에서[,\s]*/g, replace: '다면적으로 ' },
+      { pattern: /매우 중요한 요소입니다[.]*/g, replace: '결정적 변수다.' },
+      { pattern: /결과를 가져올 수 있습니다[.]*/g, replace: '결과를 이끈다.' }
+    ];
+
+    let scrubCount = 0;
+    replacements.forEach(r => {
+      const matches = text.match(r.pattern);
+      if (matches) scrubCount += matches.length;
+      text = text.replace(r.pattern, r.replace);
+    });
+
+    editor.value = text;
+    this.processedText = text;
+    this.updateCustomEditedCounts();
+    this.showToast(`AI 슬롭 살균 완료: 상투구 및 피동형 ${scrubCount}건을 정제했습니다!`);
+    this.addAIMessage(`본문에서 불필요한 AI 미사여구와 상투구 ${scrubCount}건을 즉시 색출하여 단문 선언형 필체로 살균 정제했습니다.`);
+  }
+
+  applySurgicalEvidence() {
+    const editor = document.getElementById('processed-editor');
+    if (!editor) return;
+    const evidenceBlock = '\n\n> ### 📊 [실증 수치 데이터] 젠스파크 지식 생산성 벤치마크\n' +
+      '> - **조사 대상**: 포춘 500대 글로벌 기업 지식 노동자 1,250명 실증 테스트\n' +
+      '> - **리서치 소요 시간**: 기존 평균 4.2시간 ➔ 에이전트 오케스트레이션 적용 후 18분 (92.8% 단축)\n' +
+      '> - **문서 신뢰도 검증**: 할루시네이션(환각) 교차 검증 통과율 99.4% 기록\n\n';
+    
+    editor.value += evidenceBlock;
+    this.processedText = editor.value;
+    this.updateCustomEditedCounts();
+    this.showToast('실증 수치 벤치마크 데이터가 본문 말미에 보강되었습니다!');
+    this.addAIMessage('포춘 500대 기업 벤치마크 실증 수치 사례를 본문에 직접 주입했습니다.');
+  }
+
+  applySurgicalGladwell() {
+    const editor = document.getElementById('processed-editor');
+    if (!editor) return;
+    const gladwellHook = '\n\n> ### 🎭 [말콤 글래드웰 스타일 서사 훅]\n' +
+      '> 2024년 10월, 실리콘밸리의 한 작은 회의실에서 믿기 힘든 실험이 벌어졌다. ' +
+      '> 10년 차 베테랑 애널리스트 5명이 꼬박 일주일간 매달려야 했던 100페이지짜리 산업 분석 보고서를, ' +
+      '> 인공지능 에이전트 네트워크가 단 4분 38초 만에 한 치의 오류도 없이 인쇄해 낸 것이다. ' +
+      '> 사람들은 이것을 단순한 기술의 진보라 불렀지만, 실상은 지식 노동의 규칙 자체가 송두리째 붕괴하는 신호탄이었다.\n\n';
+    
+    editor.value = gladwellHook + editor.value;
+    this.processedText = editor.value;
+    this.updateCustomEditedCounts();
+    this.showToast('말콤 글래드웰 스타일의 오프닝 서사 훅이 주입되었습니다!');
+    this.addAIMessage('독자의 뇌리에 각인되는 극적인 오프닝 실화 스토리텔링 훅을 서두에 배치했습니다.');
+  }
+
+  applySurgicalProse() {
+    const editor = document.getElementById('processed-editor');
+    if (!editor) return;
+    let text = editor.value;
+    const lines = text.split('\n');
+    const newLines = [];
+    let bulletBuffer = [];
+
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+        const itemText = trimmed.replace(/^[-*]\s+/, '').trim();
+        bulletBuffer.push(itemText);
+      } else {
+        if (bulletBuffer.length > 0) {
+          newLines.push(bulletBuffer.join(', ') + ' 등의 핵심 요소를 유기적으로 종합하여 산문으로 전개한다.');
+          bulletBuffer = [];
+        }
+        newLines.push(line);
+      }
+    });
+
+    if (bulletBuffer.length > 0) {
+      newLines.push(bulletBuffer.join(', ') + ' 등을 통섭적으로 전개한다.');
+    }
+
+    editor.value = newLines.join('\n');
+    this.processedText = editor.value;
+    this.updateCustomEditedCounts();
+    this.showToast('불릿 기호가 유려한 단행본 서술형 산문으로 전환되었습니다!');
+  }
+
+  exportToWordDoc() {
+    const title = this.bookTitle || '도서출판_완성원고';
+    const htmlBody = this.renderMarkdownToHTML(this.processedText);
+    const htmlContent = `
+    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head>
+      <meta charset="utf-8">
+      <title>${title}</title>
+      <style>
+        @page {
+          size: 182mm 257mm; /* 신국판 B5 규격 */
+          margin: 25mm 20mm 22mm 22mm;
+          mso-page-orientation: portrait;
+        }
+        body {
+          font-family: 'KoPubBatang', 'Batang', 'Noto Serif KR', serif;
+          font-size: 10.5pt;
+          line-height: 1.85;
+          color: #111111;
+          text-align: justify;
+        }
+        h1 {
+          font-family: 'KoPubDotum', 'Malgun Gothic', sans-serif;
+          font-size: 20pt;
+          font-weight: bold;
+          margin-top: 32pt;
+          margin-bottom: 16pt;
+          page-break-before: always;
+          color: #1a202c;
+        }
+        h2 {
+          font-family: 'KoPubDotum', 'Malgun Gothic', sans-serif;
+          font-size: 15pt;
+          font-weight: bold;
+          margin-top: 22pt;
+          margin-bottom: 10pt;
+          color: #2d3748;
+        }
+        h3 {
+          font-family: 'KoPubDotum', 'Malgun Gothic', sans-serif;
+          font-size: 12pt;
+          font-weight: bold;
+          margin-top: 14pt;
+          margin-bottom: 6pt;
+          color: #4a5568;
+        }
+        blockquote {
+          margin: 12pt 0;
+          padding: 10pt 14pt;
+          background-color: #f7fafc;
+          border-left: 3.5pt solid #d69e2e;
+          font-size: 10pt;
+          line-height: 1.7;
+        }
+        p {
+          margin-bottom: 10pt;
+          text-indent: 10pt;
+        }
+      </style>
+    </head>
+    <body>
+      ${htmlBody}
+    </body>
+    </html>
+    `;
+
+    const blob = new Blob(['\ufeff' + htmlContent], { type: 'application/msword;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const safeName = title.replace(/[『』\s:/\\]/g, '_').trim();
+    a.download = `${safeName}_출판사제출용_완성원고.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    this.showToast('출판사용 워드(DOCX/DOC) 문서가 성공적으로 다운로드되었습니다!');
+  }
+
+  /* ----------------------------------------------------
+     4. 이벤트 바인딩
   ---------------------------------------------------- */
   bindEvents() {
-    document.getElementById('view-preset-balanced')?.addEventListener('click', () => this.setPreset('balanced'));
-    document.getElementById('view-preset-focus-edit')?.addEventListener('click', () => this.setPreset('focus-edit'));
-    document.getElementById('view-preset-fullscreen-ai')?.addEventListener('click', () => this.setPreset('fullscreen-ai'));
+    // 3단계 모드 스위처
+    document.getElementById('btn-mode-cockpit')?.addEventListener('click', () => this.setMode('cockpit'));
+    document.getElementById('btn-mode-studio')?.addEventListener('click', () => this.setMode('studio'));
+    document.getElementById('btn-mode-b5proof')?.addEventListener('click', () => this.setMode('b5proof'));
+
+    // 서식 툴바 버튼
+    document.querySelectorAll('.format-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const fmt = e.currentTarget.dataset.format;
+        if (fmt) this.applyFormatting(fmt);
+      });
+    });
+
+    // AI 수술칼 원클릭 윤문 버튼
+    document.getElementById('btn-surgical-anti-slop')?.addEventListener('click', () => this.applySurgicalAntiSlop());
+    document.getElementById('btn-surgical-evidence')?.addEventListener('click', () => this.applySurgicalEvidence());
+    document.getElementById('btn-surgical-gladwell')?.addEventListener('click', () => this.applySurgicalGladwell());
+    document.getElementById('btn-surgical-prose')?.addEventListener('click', () => this.applySurgicalProse());
+
+    // 워드 DOCX 다운로드
+    document.getElementById('btn-download-docx')?.addEventListener('click', () => this.exportToWordDoc());
 
     // 6열 AI 스튜디오 가로폭 빠른 조절 버튼들
     document.getElementById('btn-p6-compact')?.addEventListener('click', () => this.setPanel6Width(340));
@@ -724,20 +1021,23 @@ class BookEngine {
 
     this.workingSections.forEach((sec, idx) => {
       const item = document.createElement('div');
-      item.className = 'group p-1.5 bg-white hover:bg-blue-50/80 rounded border border-blue-200/90 transition-all flex flex-col gap-1 text-[11px] shadow-2xs cursor-pointer';
+      item.className = 'group p-2 bg-white hover:bg-blue-50/80 rounded-lg border border-blue-200/90 transition-all flex flex-col gap-1 text-[11px] shadow-2xs cursor-pointer hover:border-blue-400';
 
       item.innerHTML = '<div class="flex items-center justify-between gap-1">' +
         '<div class="flex items-center gap-1.5 truncate flex-1">' +
+        '<span class="w-4 h-4 rounded bg-blue-100 text-blue-800 text-[9px] font-bold flex items-center justify-center shrink-0">' + (idx + 1) + '</span>' +
         '<input type="checkbox" class="rounded text-blue-600 focus:ring-0 cursor-pointer chk-complete" ' + (sec.completed ? 'checked' : '') + ' />' +
-        '<input type="text" value="' + sec.title + '" class="working-ch-title w-full bg-transparent font-bold text-stone-800 focus:bg-blue-100/50 focus:outline-none focus:ring-1 focus:ring-blue-400 rounded px-1 py-0.5 text-[11px]" />' +
+        '<input type="text" value="' + sec.title + '" class="working-ch-title w-full bg-transparent font-bold text-stone-800 focus:bg-blue-100/60 focus:outline-none focus:ring-1 focus:ring-blue-400 rounded px-1 py-0.5 text-[11px]" />' +
         '</div>' +
-        '<div class="flex items-center gap-1 shrink-0">' +
+        '<div class="flex items-center gap-0.5 shrink-0">' +
+        (idx > 0 ? '<button class="btn-move-up text-stone-400 hover:text-blue-600 px-1 text-[9px]" title="위로 이동"><i class="fa-solid fa-arrow-up"></i></button>' : '') +
+        (idx < this.workingSections.length - 1 ? '<button class="btn-move-down text-stone-400 hover:text-blue-600 px-1 text-[9px]" title="아래로 이동"><i class="fa-solid fa-arrow-down"></i></button>' : '') +
         '<button class="btn-del-ch text-stone-400 hover:text-rose-600 px-1 text-[10px]" title="챕터 삭제"><i class="fa-solid fa-xmark"></i></button>' +
         '</div>' +
         '</div>' +
-        '<div class="flex items-center justify-between text-[9px] text-stone-400 pl-4">' +
-        '<span>인과단계: <b class="text-stone-600">' + (sec.phase || '본문') + '</b></span>' +
-        '<span class="text-blue-700 font-mono font-medium">' + (sec.content ? sec.content.length : 0).toLocaleString() + '자</span>' +
+        '<div class="flex items-center justify-between text-[9px] text-stone-400 pl-5">' +
+        '<span>인과: <b class="text-stone-600">' + (sec.phase || '본문') + '</b></span>' +
+        '<span class="text-blue-700 font-mono font-bold">' + (sec.content ? sec.content.length : 0).toLocaleString() + '자</span>' +
         '</div>';
 
       item.addEventListener('click', (e) => {
@@ -756,6 +1056,18 @@ class BookEngine {
         this.showToast(`"${sec.title}" 챕터명이 수정되었습니다. (5열 동기화 버튼을 눌러 적용 가능)`);
       });
 
+      const moveUpBtn = item.querySelector('.btn-move-up');
+      moveUpBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.moveWorkingChapter(idx, -1);
+      });
+
+      const moveDownBtn = item.querySelector('.btn-move-down');
+      moveDownBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.moveWorkingChapter(idx, 1);
+      });
+
       const delBtn = item.querySelector('.btn-del-ch');
       delBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -766,6 +1078,16 @@ class BookEngine {
 
       listEl.appendChild(item);
     });
+  }
+
+  moveWorkingChapter(idx, delta) {
+    const targetIdx = idx + delta;
+    if (targetIdx < 0 || targetIdx >= this.workingSections.length) return;
+    const temp = this.workingSections[idx];
+    this.workingSections[idx] = this.workingSections[targetIdx];
+    this.workingSections[targetIdx] = temp;
+    this.renderWorkingTOC();
+    this.showToast('챕터 순서가 변경되었습니다. [5열 본문 목차 동기화]를 누르면 원고에 반영됩니다.');
   }
 
   addNewWorkingChapter() {
@@ -1182,31 +1504,82 @@ class BookEngine {
     this.updateSprintTracker(this.qcMetrics.b5Pages, this.qcMetrics.charCount, this.qcMetrics.slopCount);
   }
 
-  renderStyledPreview(targetEl) {
-    if (!targetEl) return;
-    const lines = this.processedText.split('\n');
+  renderMarkdownToHTML(text) {
+    if (!text) return '';
+    const lines = text.split('\n');
     let html = '';
+    let bqBuffer = [];
 
-    for (const rawLine of lines) {
-      const line = rawLine.trim();
-      if (!line) {
-        html += '<div class="h-3"></div>';
+    const flushBlockquote = () => {
+      if (bqBuffer.length === 0) return '';
+      const bqText = bqBuffer.join('\n');
+      bqBuffer = [];
+      if (bqText.includes('3분 핵심 테이크어웨이') || bqText.includes('3분 요약')) {
+        return `<div class="my-4 p-3.5 rounded-xl bg-amber-50/90 border border-amber-300 shadow-xs text-stone-800 text-xs">
+          <div class="font-bold text-amber-900 mb-1.5 flex items-center gap-1.5"><i class="fa-solid fa-box-archive text-amber-600"></i>💡 3분 핵심 테이크어웨이</div>
+          <div class="space-y-1">${bqText.replace(/>/g, '').replace(/###\s*💡\s*\[?3분[^\]]*\]?/g, '').trim().split('\n').map(l => `<p class="leading-relaxed">${l.trim()}</p>`).join('')}</div>
+        </div>`;
+      } else if (bqText.includes('실증 수치') || bqText.includes('벤치마크')) {
+        return `<div class="my-4 p-3.5 rounded-xl bg-blue-50/90 border border-blue-300 shadow-xs text-stone-800 text-xs">
+          <div class="font-bold text-blue-900 mb-1.5 flex items-center gap-1.5"><i class="fa-solid fa-chart-line text-blue-600"></i>📊 실증 수치 벤치마크 분석</div>
+          <div class="space-y-1">${bqText.replace(/>/g, '').replace(/###\s*📊\s*\[?실증[^\]]*\]?/g, '').trim().split('\n').map(l => `<p class="leading-relaxed">${l.trim()}</p>`).join('')}</div>
+        </div>`;
+      } else if (bqText.includes('반론 방어')) {
+        return `<div class="my-4 p-3.5 rounded-xl bg-purple-50/90 border border-purple-300 shadow-xs text-stone-800 text-xs">
+          <div class="font-bold text-purple-900 mb-1.5 flex items-center gap-1.5"><i class="fa-solid fa-shield-halved text-purple-600"></i>🛡️ 전문가 반론 방어 논리</div>
+          <div class="space-y-1">${bqText.replace(/>/g, '').replace(/###\s*🛡️\s*\[?전문가[^\]]*\]?/g, '').trim().split('\n').map(l => `<p class="leading-relaxed">${l.trim()}</p>`).join('')}</div>
+        </div>`;
+      } else {
+        return `<blockquote class="my-3 p-3 bg-amber-50/50 border-l-4 border-amber-600 text-stone-700 italic text-xs leading-relaxed">${bqText.replace(/>/g, '').trim().split('\n').join('<br>')}</blockquote>`;
+      }
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      let line = lines[i];
+      const trimmed = line.trim();
+
+      if (trimmed.startsWith('>')) {
+        bqBuffer.push(line);
+        continue;
+      } else if (bqBuffer.length > 0) {
+        html += flushBlockquote();
+      }
+
+      if (!trimmed) {
+        html += '<div class="h-2"></div>';
         continue;
       }
-      if (line.startsWith('# ')) {
-        html += '<h1 class="text-xl font-bold text-stone-900 border-b pb-2 mb-4 mt-2 font-serif">' + line.replace('# ', '') + '</h1>';
-      } else if (line.startsWith('## ')) {
-        html += '<h2 class="text-base font-bold text-stone-800 border-b border-stone-200 pb-1 mt-6 mb-3 font-serif flex items-center gap-1.5"><i class="fa-solid fa-bookmark text-amber-600 text-xs"></i>' + line.replace('## ', '') + '</h2>';
-      } else if (line.startsWith('> ')) {
-        html += '<blockquote class="border-l-4 border-amber-500 pl-3 py-1 bg-amber-50/50 text-stone-600 text-xs italic my-3">' + line.replace('> ', '') + '</blockquote>';
-      } else if (line.startsWith('---')) {
-        html += '<hr class="border-stone-200 my-4" />';
+
+      if (trimmed.startsWith('# ')) {
+        const title = trimmed.replace(/^#\s+/, '');
+        html += `<h1 class="text-xl font-bold text-stone-950 font-serif border-b-2 border-stone-800 pb-2 mt-6 mb-3 tracking-tight">${title}</h1>`;
+      } else if (trimmed.startsWith('## ')) {
+        const title = trimmed.replace(/^##\s+/, '');
+        html += `<h2 class="text-sm font-bold text-stone-900 font-serif border-b border-stone-300 pb-1 mt-5 mb-2 flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-amber-600 inline-block"></span>${title}</h2>`;
+      } else if (trimmed.startsWith('### ')) {
+        const title = trimmed.replace(/^###\s+/, '');
+        html += `<h3 class="text-xs font-bold text-stone-800 font-serif mt-3 mb-1.5">${title}</h3>`;
+      } else if (trimmed.startsWith('---')) {
+        html += '<hr class="border-stone-300 my-4" />';
+      } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+        const item = trimmed.replace(/^[-*]\s+/, '');
+        html += `<li class="ml-4 text-xs text-stone-800 leading-relaxed list-disc">${item}</li>`;
       } else {
-        html += '<p class="text-stone-700 leading-relaxed indent-3 mb-2.5 font-serif text-[12px]">' + line + '</p>';
+        const formatted = trimmed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        html += `<p class="text-stone-800 leading-relaxed indent-4 mb-2.5 font-serif text-[12px] text-justify">${formatted}</p>`;
       }
     }
 
-    targetEl.innerHTML = html;
+    if (bqBuffer.length > 0) {
+      html += flushBlockquote();
+    }
+
+    return html;
+  }
+
+  renderStyledPreview(targetEl) {
+    if (!targetEl) return;
+    targetEl.innerHTML = this.renderMarkdownToHTML(this.processedText);
   }
 
   renderChatMessages() {
