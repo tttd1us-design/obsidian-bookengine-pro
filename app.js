@@ -847,6 +847,23 @@ class BookEngine {
       this.setFontSize(Math.min(24, this.currentFontSizePt + 1));
     });
 
+    // 1·2열 기획서/기준목차 접기/펼치기 토글
+    document.getElementById('btn-toggle-ref-panels')?.addEventListener('click', () => this.toggleRefPanels());
+
+    // 글씨 크기 조절 버튼 (최소 8pt 이상)
+    document.querySelectorAll('.btn-font-size').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const pt = parseInt(e.currentTarget.dataset.pt, 10);
+        if (pt) this.setFontSize(pt);
+      });
+    });
+    document.getElementById('btn-font-minus')?.addEventListener('click', () => {
+      this.setFontSize(Math.max(8, this.currentFontSizePt - 1));
+    });
+    document.getElementById('btn-font-plus')?.addEventListener('click', () => {
+      this.setFontSize(Math.min(24, this.currentFontSizePt + 1));
+    });
+
 
     // 3단계 초안 구조화 AI 엔진 버튼 바
     document.getElementById('btn-linter-clean')?.addEventListener('click', () => this.runLinterClean());
@@ -1326,28 +1343,74 @@ class BookEngine {
 
     this.workingSections.forEach((sec, idx) => {
       const item = document.createElement('div');
-      item.className = 'group p-2 bg-white hover:bg-blue-50/80 rounded-lg border border-blue-200/90 transition-all flex flex-col gap-1 text-[11px] shadow-2xs cursor-pointer hover:border-blue-400';
+      item.setAttribute('draggable', 'true');
+      item.dataset.index = idx;
+      item.className = 'group p-2.5 bg-white hover:bg-blue-50/90 rounded-xl border border-blue-200/90 transition-all flex flex-col gap-1 text-xs shadow-2xs cursor-pointer hover:border-blue-400 toc-item-drag';
 
-      item.innerHTML = '<div class="flex items-center justify-between gap-1">' +
+      item.innerHTML = '<div class="flex items-center justify-between gap-1.5">' +
         '<div class="flex items-center gap-1.5 truncate flex-1">' +
-        '<span class="w-4 h-4 rounded bg-blue-100 text-blue-800 text-[11px] font-bold flex items-center justify-center shrink-0">' + (idx + 1) + '</span>' +
-        '<input type="checkbox" class="rounded text-blue-600 focus:ring-0 cursor-pointer chk-complete" ' + (sec.completed ? 'checked' : '') + ' />' +
-        '<input type="text" value="' + sec.title + '" class="working-ch-title w-full bg-transparent font-bold text-stone-800 focus:bg-blue-100/60 focus:outline-none focus:ring-1 focus:ring-blue-400 rounded px-1 py-0.5 text-[11px]" />' +
+        '<i class="fa-solid fa-grip-vertical text-stone-400 group-hover:text-blue-600 cursor-grab px-1 text-xs handle-drag" title="마우스로 드래그하여 목차 및 본문 순서 실시간 이동"></i>' +
+        '<span class="w-5 h-5 rounded bg-blue-100 text-blue-900 text-[11px] font-bold flex items-center justify-center shrink-0">' + (idx + 1) + '</span>' +
+        '<input type="checkbox" class="rounded text-blue-600 focus:ring-0 cursor-pointer chk-complete w-3.5 h-3.5" ' + (sec.completed ? 'checked' : '') + ' title="집필 완료 여부" />' +
+        '<input type="text" value="' + sec.title + '" class="working-ch-title w-full bg-transparent font-bold text-stone-800 focus:bg-blue-100/60 focus:outline-none focus:ring-1 focus:ring-blue-400 rounded px-1.5 py-0.5 text-xs" />' +
         '</div>' +
-        '<div class="flex items-center gap-0.5 shrink-0">' +
-        (idx > 0 ? '<button class="btn-move-up text-stone-400 hover:text-blue-600 px-1 text-[11px]" title="위로 이동"><i class="fa-solid fa-arrow-up"></i></button>' : '') +
-        (idx < this.workingSections.length - 1 ? '<button class="btn-move-down text-stone-400 hover:text-blue-600 px-1 text-[11px]" title="아래로 이동"><i class="fa-solid fa-arrow-down"></i></button>' : '') +
-        '<button class="btn-del-ch text-stone-400 hover:text-rose-600 px-1 text-xs" title="챕터 삭제"><i class="fa-solid fa-xmark"></i></button>' +
+        '<div class="flex items-center gap-1 shrink-0">' +
+        (idx > 0 ? '<button class="btn-move-up text-stone-400 hover:text-blue-600 p-1 text-xs hover:bg-blue-100 rounded" title="위로 이동 (본문 동시 이동)"><i class="fa-solid fa-arrow-up"></i></button>' : '') +
+        (idx < this.workingSections.length - 1 ? '<button class="btn-move-down text-stone-400 hover:text-blue-600 p-1 text-xs hover:bg-blue-100 rounded" title="아래로 이동 (본문 동시 이동)"><i class="fa-solid fa-arrow-down"></i></button>' : '') +
+        '<button class="btn-del-ch text-stone-400 hover:text-rose-600 p-1 text-xs hover:bg-rose-100 rounded" title="챕터 삭제"><i class="fa-solid fa-xmark"></i></button>' +
         '</div>' +
         '</div>' +
-        '<div class="flex items-center justify-between text-[11px] text-stone-400 pl-5">' +
-        '<span>인과: <b class="text-stone-600">' + (sec.phase || '본문') + '</b></span>' +
+        '<div class="flex items-center justify-between text-[11px] text-stone-500 pl-7">' +
+        '<span>인과: <b class="text-stone-700">' + (sec.phase || '본문') + '</b></span>' +
         '<span class="text-blue-700 font-mono font-bold">' + (sec.content ? sec.content.length : 0).toLocaleString() + '자</span>' +
         '</div>';
 
+      // 마우스 클릭 시 본문 해당 위치로 즉시 스크롤 이동
       item.addEventListener('click', (e) => {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
         this.scrollToChapter(sec.title);
+      });
+
+      // 마우스 드래그 앤 드롭 이벤트 (목차 이동 시 5열 본문 실시간 동시 연동!)
+      item.addEventListener('dragstart', (e) => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', idx);
+        item.classList.add('is-dragging');
+      });
+
+      item.addEventListener('dragend', () => {
+        item.classList.remove('is-dragging');
+        document.querySelectorAll('.toc-item-drag').forEach(el => {
+          el.classList.remove('drag-over-top', 'drag-over-bottom');
+        });
+      });
+
+      item.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const rect = item.getBoundingClientRect();
+        const midY = rect.top + rect.height / 2;
+        if (e.clientY < midY) {
+          item.classList.add('drag-over-top');
+          item.classList.remove('drag-over-bottom');
+        } else {
+          item.classList.add('drag-over-bottom');
+          item.classList.remove('drag-over-top');
+        }
+      });
+
+      item.addEventListener('dragleave', () => {
+        item.classList.remove('drag-over-top', 'drag-over-bottom');
+      });
+
+      item.addEventListener('drop', (e) => {
+        e.preventDefault();
+        item.classList.remove('drag-over-top', 'drag-over-bottom');
+        const fromIndexStr = e.dataTransfer.getData('text/plain');
+        if (fromIndexStr === '') return;
+        const fromIndex = parseInt(fromIndexStr, 10);
+        let toIndex = idx;
+        this.reorderWorkingSections(fromIndex, toIndex);
       });
 
       const chk = item.querySelector('.chk-complete');
@@ -1358,7 +1421,8 @@ class BookEngine {
       const titleInput = item.querySelector('.working-ch-title');
       titleInput?.addEventListener('change', (e) => {
         sec.title = e.target.value;
-        this.showToast(`"${sec.title}" 챕터명이 수정되었습니다. (5열 동기화 버튼을 눌러 적용 가능)`);
+        this.syncWorkingTOCToProcessed();
+        this.showToast(`"${sec.title}" 챕터명이 수정되고 본문에 즉시 동기화되었습니다.`);
       });
 
       const moveUpBtn = item.querySelector('.btn-move-up');
@@ -1378,12 +1442,35 @@ class BookEngine {
         e.stopPropagation();
         this.workingSections.splice(idx, 1);
         this.renderWorkingTOC();
-        this.showToast('챕터가 삭제되었습니다.');
+        this.syncWorkingTOCToProcessed();
+        this.showToast('챕터가 삭제되고 본문이 갱신되었습니다.');
       });
 
       listEl.appendChild(item);
     });
+
     if (this.panelFontSizes) this.applyBoxFontSize('panel-4', this.panelFontSizes['panel-4']);
+  }
+
+  // 마우스 드래그 또는 버튼으로 이동 시 목차와 본문 동시 이동 처리
+  reorderWorkingSections(fromIndex, toIndex) {
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return;
+    if (fromIndex >= this.workingSections.length || toIndex >= this.workingSections.length) return;
+
+    const moved = this.workingSections.splice(fromIndex, 1)[0];
+    this.workingSections.splice(toIndex, 0, moved);
+
+    // 1. 목차 리렌더링
+    this.renderWorkingTOC();
+
+    // 2. 5열 본문도 목차 순서에 맞춰 실시간으로 동시 이동!
+    this.syncWorkingTOCToProcessed();
+
+    // 3. 이동된 챕터 위치로 스크롤 이동
+    this.scrollToChapter(moved.title);
+
+    this.showToast(`✨ [${moved.title}] 챕터와 본문이 새 위치로 함께 이동했습니다!`);
+    this.addAIMessage(`【마우스 이동 연동 완료】 수정목차에서 "${moved.title}"의 위치가 변경되어, 5열 수정본문도 동일한 순서로 실시간 재배열되었습니다.`);
   }
 
   moveWorkingChapter(idx, delta) {
@@ -1393,7 +1480,10 @@ class BookEngine {
     this.workingSections[idx] = this.workingSections[targetIdx];
     this.workingSections[targetIdx] = temp;
     this.renderWorkingTOC();
-    this.showToast('챕터 순서가 변경되었습니다. [5열 본문 목차 동기화]를 누르면 원고에 반영됩니다.');
+    // 마우스 이동 시 본문도 함께 즉시 이동!
+    this.syncWorkingTOCToProcessed();
+    this.scrollToChapter(this.workingSections[targetIdx].title);
+    this.showToast(`"${this.workingSections[targetIdx].title}" 챕터와 본문이 함께 이동했습니다.`);
   }
 
   addNewWorkingChapter() {
