@@ -9,7 +9,7 @@ class BookEngine {
     this.processedText = '';
     this.viewMode = 'text';
     this.currentModel = 'tri-orchestra';
-    this.defaultWidths = [180, 160, 220, 240, 460, 480];
+    this.defaultWidths = [170, 150, 190, 210, 360, 400, 290];
 
     this.chatMessages = [
       {
@@ -54,6 +54,7 @@ class BookEngine {
 
   init() {
     this.bindEvents();
+    this.bindQuickTools();
     this.initResizers();
     this.loadPanelWidths();
     this.analyzeManuscriptAndPopulate(this.rawText, false);
@@ -185,9 +186,19 @@ class BookEngine {
             prevPanel.style.flex = '0 0 ' + newP5 + 'px';
             nextPanel.style.width = newP6 + 'px';
             nextPanel.style.flex = '0 0 ' + newP6 + 'px';
-          } else if (isResizer6) {
-            // 6열 우측 분할선: 마우스를 우측으로 당기면 6열 단독 확장
-            const newWidth = Math.max(260, Math.min(1200, startPrevWidth + dx));
+          } else if (isResizer6 && prevPanel && nextPanel) {
+            // 6열과 7열(자주 사용하는 기능) 사이 분할선
+            // 우측으로 드래그(dx > 0): 6열 확장, 7열 축소
+            // 좌측으로 드래그(dx < 0): 6열 축소, 7열 확장
+            const newP6 = Math.max(260, Math.min(1100, startPrevWidth + dx));
+            const newPTools = Math.max(160, Math.min(600, startNextWidth - dx));
+            prevPanel.style.width = newP6 + 'px';
+            prevPanel.style.flex = '0 0 ' + newP6 + 'px';
+            nextPanel.style.width = newPTools + 'px';
+            nextPanel.style.flex = '0 0 ' + newPTools + 'px';
+          } else if (resizer.dataset.target === 'panel-quick-tools') {
+            // 7열 최우측 분할선: 7열 단독 확장/축소
+            const newWidth = Math.max(160, Math.min(700, startPrevWidth + dx));
             prevPanel.style.width = newWidth + 'px';
             prevPanel.style.flex = '0 0 ' + newWidth + 'px';
           } else {
@@ -259,15 +270,15 @@ class BookEngine {
 
     if (presetType === 'balanced') {
       if (btnBalanced) btnBalanced.className = activeBtnClass;
-      this.applyWidths([220, 180, 240, 220, 360, 420]);
-      this.showToast('표준 균형 뷰(6열 표준 배분)로 전환되었습니다.');
+      this.applyWidths([180, 150, 200, 200, 340, 380, 290]);
+      this.showToast('표준 균형 뷰(7개 구역 표준 배분)로 전환되었습니다.');
     } else if (presetType === 'focus-edit') {
       if (btnFocus) btnFocus.className = activeBtnClass;
-      this.applyWidths([160, 140, 180, 240, 480, 450]);
+      this.applyWidths([140, 130, 160, 210, 440, 420, 290]);
       this.showToast('집필·AI 집중 뷰(4, 5, 6열 작업 구역 극대화)로 전환되었습니다.');
     } else if (presetType === 'fullscreen-ai') {
       if (btnFullscreenAI) btnFullscreenAI.className = activeBtnClass;
-      this.applyWidths([140, 130, 160, 180, 350, 680]);
+      this.applyWidths([130, 120, 140, 160, 320, 620, 290]);
       this.showToast('AI 수석편집장 확장 뷰(AI 스튜디오 최대화)로 전환되었습니다.');
     }
   }
@@ -404,6 +415,146 @@ class BookEngine {
         }
       });
     });
+  }
+
+  /* ----------------------------------------------------
+     3-1. 7열 자주 사용하는 기능 바인딩 (Quick Tools)
+  ---------------------------------------------------- */
+  bindQuickTools() {
+    // 카테고리 필터 버튼
+    document.querySelectorAll('.quick-filter-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.quick-filter-btn').forEach(b => {
+          b.className = 'quick-filter-btn px-2 py-0.5 rounded text-stone-400 hover:text-white';
+        });
+        const target = e.currentTarget;
+        target.className = 'quick-filter-btn px-2 py-0.5 rounded bg-amber-600 text-white font-medium shadow-xs';
+        const cat = target.dataset.category;
+        document.querySelectorAll('.quick-card-group').forEach(group => {
+          if (cat === 'all' || group.dataset.group === cat) {
+            group.classList.remove('hidden');
+          } else {
+            group.classList.add('hidden');
+          }
+        });
+      });
+    });
+
+    // 패널 접기/펼치기 토글
+    document.getElementById('btn-toggle-quick-panel')?.addEventListener('click', () => {
+      const panel = document.getElementById('panel-quick-tools');
+      const btn = document.getElementById('btn-toggle-quick-panel');
+      if (!panel) return;
+      if (panel.classList.contains('is-collapsed')) {
+        panel.classList.remove('is-collapsed');
+        panel.style.width = '290px';
+        panel.style.flex = '0 0 290px';
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-chevron-right text-[10px]"></i>';
+        this.showToast('자주 사용하는 기능 패널이 펼쳐졌습니다.');
+      } else {
+        panel.classList.add('is-collapsed');
+        panel.style.width = '48px';
+        panel.style.flex = '0 0 48px';
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-chevron-left text-[10px]"></i>';
+        this.showToast('자주 사용하는 기능 패널이 최소화되었습니다.');
+      }
+      this.savePanelWidths();
+    });
+
+    // 1. 퇴고: 슬롭 완전 박멸
+    document.getElementById('btn-quick-slop')?.addEventListener('click', () => {
+      this.handleUserChatMessage('슬롭 삭제');
+    });
+
+    // 1. 퇴고: 글래드웰 선언형 문체 전환
+    document.getElementById('btn-quick-gladwell')?.addEventListener('click', () => {
+      this.handleUserChatMessage('말콤 글래드웰 선언형 문체 전환');
+    });
+
+    // 1. 퇴고: 기업 실증 통계 주입
+    document.getElementById('btn-quick-stats')?.addEventListener('click', () => {
+      this.handleUserChatMessage('기업 실증 벤치마크 통계 보강');
+    });
+
+    // 1. 퇴고: 불릿 줄글 산문화
+    document.getElementById('btn-quick-bullet')?.addEventListener('click', () => {
+      let lines = this.processedText.split('\n');
+      lines = lines.map(line => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('+ ')) {
+          return trimmed.replace(/^[-*+]\s+/, '');
+        }
+        return line;
+      });
+      this.processedText = lines.join('\n');
+      const editor = document.getElementById('processed-editor');
+      if (editor) editor.value = this.processedText;
+      this.updateCustomEditedCounts();
+      this.showToast('목록형 불릿 기호가 모두 유려한 줄글 산문으로 변환되었습니다.');
+      this.addAIMessage('【불릿 기호 줄글화 완료】 5열 본문 내의 모든 목록형 기호를 매끄러운 단행본 전개 서술형 산문으로 변환했습니다.');
+    });
+
+    // 2. 조판: B5 미리보기
+    document.getElementById('btn-quick-b5-preview')?.addEventListener('click', () => {
+      this.openB5Modal();
+    });
+
+    // 2. 조판: 표지 및 판권 메타데이터 삽입
+    document.getElementById('btn-quick-cover')?.addEventListener('click', () => {
+      const coverBlock = `\n\n---\n\n# ${this.bookTitle}\n\n` +
+        `> **부제**: 100만 자 원고를 압축하는 AI 지식 생산과 전문 집필 바이블\n` +
+        `> **판형**: 신국판 B5 (182×257mm) | **발행**: 2026 베스트셀러 출판위원회\n` +
+        `> **저자**: 전문 저술가 & AI 총괄 오케스트레이터\n\n---\n\n`;
+      this.processedText = coverBlock + this.processedText;
+      const editor = document.getElementById('processed-editor');
+      if (editor) editor.value = this.processedText;
+      this.updateCustomEditedCounts();
+      this.showToast('도서 표지 및 판권 메타데이터 블록이 본문 상단에 삽입되었습니다.');
+    });
+
+    // 2. 조판: 챕터별 3분 요약 테이크어웨이 박스
+    document.getElementById('btn-quick-takeaway')?.addEventListener('click', () => {
+      const takeawaySnippet = `\n\n> 💡 **3분 핵심 테이크어웨이 (Executive Summary)**\n` +
+        `> 1. 정보 과부하 시대에는 단순 검색이 아니라 다중 에이전트 기반 지식 합성이 핵심 경쟁력이다.\n` +
+        `> 2. 피동적 AI 슬롭을 걷어내고 인간 저자만의 고유한 선언형 통찰과 실증 데이터를 융합하라.\n` +
+        `> 3. 신국판 B5 기준의 체계적 인과 구조(문제-메커니즘-실증-결론)가 출판 승패를 결정한다.\n\n`;
+      this.processedText += takeawaySnippet;
+      const editor = document.getElementById('processed-editor');
+      if (editor) editor.value = this.processedText;
+      this.updateCustomEditedCounts();
+      this.showToast('챕터 마무리 3분 핵심 테이크어웨이 요약 박스가 삽입되었습니다.');
+    });
+
+    // 3. AI 프롬프트 트리거
+    document.querySelectorAll('.btn-ai-prompt-trigger').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const prompt = e.currentTarget.dataset.prompt;
+        if (prompt) {
+          this.handleUserChatMessage(prompt);
+        }
+      });
+    });
+
+    // 4. 저장 & 동기화
+    document.getElementById('btn-quick-sync-git')?.addEventListener('click', () => this.syncToGitHub());
+    document.getElementById('btn-quick-save-md')?.addEventListener('click', () => this.downloadMarkdown());
+    document.getElementById('btn-quick-copy-text')?.addEventListener('click', () => this.copyProcessedText());
+    document.getElementById('btn-quick-print')?.addEventListener('click', () => window.print());
+  }
+
+  updateSprintTracker(b5Pages, charCount, slopCount) {
+    const percent = Math.min(100, Math.round((b5Pages / 300) * 100));
+    const percentEl = document.getElementById('quick-progress-percent');
+    const barEl = document.getElementById('quick-progress-bar');
+    const pEl = document.getElementById('quick-stat-pages');
+    const cEl = document.getElementById('quick-stat-chars');
+    const sEl = document.getElementById('quick-stat-slop');
+
+    if (percentEl) percentEl.textContent = percent + '%';
+    if (barEl) barEl.style.width = percent + '%';
+    if (pEl) pEl.textContent = (b5Pages || 0).toLocaleString() + '쪽';
+    if (cEl) cEl.textContent = (charCount || 0).toLocaleString() + '자';
+    if (sEl) sEl.textContent = (slopCount || 0) + '건';
   }
 
   /* ----------------------------------------------------
@@ -678,6 +829,7 @@ class BookEngine {
     if (styledView && this.viewMode === 'styled') {
       this.renderStyledPreview(styledView);
     }
+    this.updateSprintTracker(b5Pages, charCount, slopFound);
   }
 
   /* ----------------------------------------------------
@@ -1002,6 +1154,8 @@ class BookEngine {
 
     const slopEl = document.getElementById('mini-qc-slop');
     if (slopEl) slopEl.textContent = this.qcMetrics.slopCount + '건';
+
+    this.updateSprintTracker(this.qcMetrics.b5Pages, this.qcMetrics.charCount, this.qcMetrics.slopCount);
   }
 
   renderStyledPreview(targetEl) {
