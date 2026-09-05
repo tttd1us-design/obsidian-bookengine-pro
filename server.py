@@ -149,7 +149,47 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                             f.write(content)
                         created_files.append(f'chapters/{filename}')
 
-                # 4. 00_목차_및_구조분석표.md
+                # 4. .obsidian 설정 디렉토리 자동 생성 (옵시디언 볼트 즉시 완벽 구동)
+                obsidian_dir = os.path.join(folder_path, '.obsidian')
+                os.makedirs(obsidian_dir, exist_ok=True)
+                
+                # 4-1. community-plugins.json (Copilot, Text Generator, Smart Connections, Linter 자동 등록)
+                plugins_json_file = os.path.join(obsidian_dir, 'community-plugins.json')
+                plugins_list = [
+                    "copilot",
+                    "obsidian-textgenerator-plugin",
+                    "smart-connections",
+                    "obsidian-linter"
+                ]
+                with open(plugins_json_file, 'w', encoding='utf-8') as f:
+                    json.dump(plugins_list, f, indent=2, ensure_ascii=False)
+                created_files.append('.obsidian/community-plugins.json')
+
+                # 4-2. app.json (라이브 프리뷰, 줄번호, 맞춤법 검사 등 최적 집필 환경)
+                app_json_file = os.path.join(obsidian_dir, 'app.json')
+                app_settings = {
+                    "spellcheck": True,
+                    "livePreview": True,
+                    "showLineNumber": True,
+                    "readableLineLength": True,
+                    "tabSize": 2
+                }
+                with open(app_json_file, 'w', encoding='utf-8') as f:
+                    json.dump(app_settings, f, indent=2, ensure_ascii=False)
+                created_files.append('.obsidian/app.json')
+
+                # 4-3. appearance.json (황금 서적 앰버 테마 및 명품 바탕 폰트)
+                appearance_json_file = os.path.join(obsidian_dir, 'appearance.json')
+                appearance_settings = {
+                    "accentColor": "#d97706",
+                    "baseFontSize": 16,
+                    "textFontFamily": "KoPubWorldBatang, Noto Serif KR, serif"
+                }
+                with open(appearance_json_file, 'w', encoding='utf-8') as f:
+                    json.dump(appearance_settings, f, indent=2, ensure_ascii=False)
+                created_files.append('.obsidian/appearance.json')
+
+                # 5. 00_목차_및_구조분석표.md
                 toc_file = os.path.join(folder_path, '00_목차_및_구조분석표.md')
                 with open(toc_file, 'w', encoding='utf-8') as f:
                     toc_content = f"# {title} - 전체 목차 아키텍처\n\n"
