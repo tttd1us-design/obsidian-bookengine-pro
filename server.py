@@ -3,6 +3,9 @@ import socketserver
 import webbrowser
 import os
 import sys
+import json
+import subprocess
+from datetime import datetime
 
 PORT = 8765
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
@@ -10,6 +13,49 @@ DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
+
+    def do_POST(self):
+        if self.path == '/api/github-sync':
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                text = data.get('content', '')
+                title = data.get('title', '원고')
+
+                os.makedirs(os.path.join(DIRECTORY, 'manuscript'), exist_ok=True)
+                safe_title = "".join(c for c in title if c.isalnum() or c in (' ', '_', '-', '(', ')', '『', '』')).strip()
+                if not safe_title:
+                    safe_title = 'manuscript'
+                file_path = os.path.join(DIRECTORY, 'manuscript', f'{safe_title}.md')
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(text)
+
+                subprocess.run(['git', 'add', '.'], cwd=DIRECTORY, check=True)
+                timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                commit_msg = f'docs(manuscript): sync "{title}" at {timestamp}'
+                subprocess.run(['git', 'commit', '-m', commit_msg], cwd=DIRECTORY, check=False)
+                push_res = subprocess.run(['git', 'push', 'origin', 'main'], cwd=DIRECTORY, capture_output=True, text=True)
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.end_headers()
+                response = {
+                    'success': True,
+                    'message': f'GitHub 저장소에 성공적으로 동기화 및 푸시되었습니다!',
+                    'file': os.path.basename(file_path),
+                    'commit': commit_msg,
+                    'repoUrl': 'https://github.com/tttd1us-design/obsidian-bookengine-pro'
+                }
+                self.wfile.write(json.dumps(response, ensure_ascii=False).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.end_headers()
+                err_resp = {'success': False, 'error': str(e)}
+                self.wfile.write(json.dumps(err_resp, ensure_ascii=False).encode('utf-8'))
+            return
+        super().do_POST()
 
 def run():
     os.chdir(DIRECTORY)

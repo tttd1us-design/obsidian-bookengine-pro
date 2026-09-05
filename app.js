@@ -350,6 +350,7 @@ class BookEngine {
 
     document.getElementById('btn-copy-processed')?.addEventListener('click', () => this.copyProcessedText());
     document.getElementById('btn-download-md')?.addEventListener('click', () => this.downloadMarkdown());
+    document.getElementById('btn-github-sync')?.addEventListener('click', () => this.syncToGitHub());
 
     document.getElementById('view-mode-text')?.addEventListener('click', () => this.switchViewMode('text'));
     document.getElementById('view-mode-styled')?.addEventListener('click', () => this.switchViewMode('styled'));
@@ -1147,6 +1148,47 @@ class BookEngine {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     this.showToast(filename + ' 다운로드 완료!');
+  }
+
+  async syncToGitHub() {
+    if (!this.processedText || !this.processedText.trim()) {
+      this.showToast('동기화할 완성원고 내용이 없습니다.');
+      return;
+    }
+
+    const syncBtn = document.getElementById('btn-github-sync');
+    const originalHtml = syncBtn ? syncBtn.innerHTML : '';
+    if (syncBtn) {
+      syncBtn.disabled = true;
+      syncBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-emerald-400"></i><span>GitHub 푸시 중...</span>';
+    }
+
+    try {
+      const response = await fetch('/api/github-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: this.processedText,
+          title: this.bookTitle
+        })
+      });
+
+      const res = await response.json();
+      if (res.success) {
+        this.showToast('GitHub 저장소(main 브랜치)에 성공적으로 동기화되었습니다!');
+        this.addAIMessage(`【GitHub 동기화 완료】\n• 상태: 원격 저장소 푸시 완료\n• 커밋: ${res.commit}\n• 파일: manuscript/${res.file}\n• 저장소: ${res.repoUrl}\n\n옵시디언 도서 집필 데이터가 클라우드 GitHub에 무결점으로 버전 백업되었습니다.`);
+      } else {
+        this.showToast('GitHub 동기화 실패: ' + (res.error || '알 수 없는 오류'));
+      }
+    } catch (err) {
+      console.error(err);
+      this.showToast('GitHub 연동 통신 오류: ' + err.message);
+    } finally {
+      if (syncBtn) {
+        syncBtn.disabled = false;
+        syncBtn.innerHTML = originalHtml;
+      }
+    }
   }
 
   showToast(msg) {
