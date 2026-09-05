@@ -58,6 +58,7 @@ class BookEngine {
     this.bindQuickTools();
     this.initResizers();
     this.loadPanelWidths();
+    this.initPanelFontControllers();
     this.analyzeManuscriptAndPopulate(this.rawText, false);
     // 기본 모드를 중간 원본 및 수정목차/수정본문 스튜디오 모드로 활성화
     this.setMode('studio');
@@ -1382,6 +1383,7 @@ class BookEngine {
 
       listEl.appendChild(item);
     });
+    if (this.panelFontSizes) this.applyBoxFontSize('panel-4', this.panelFontSizes['panel-4']);
   }
 
   moveWorkingChapter(idx, delta) {
@@ -1512,6 +1514,7 @@ class BookEngine {
 
       listEl.appendChild(li);
     });
+    if (this.panelFontSizes) this.applyBoxFontSize('panel-2', this.panelFontSizes['panel-2']);
   }
 
   scrollToChapter(title) {
@@ -2501,6 +2504,140 @@ class BookEngine {
 
     this.showToast('🧭 3막 8시퀀스 스토리 서클 긴장감 분석 맵 생성 완료!');
     this.addAIMessage(`【3막 8시퀀스 스토리 서클 긴장감 분석 완료】\n• 댄 하몬(Dan Harmon) 스토리 서클 8단계에 원고 챕터를 1:1 매핑했습니다.\n• 1막(안정/결핍) ➔ 2막(진입/시련/획득/대가) ➔ 3막(귀환/변화)의 서사적 텐션 곡선을 점검하고, 몰입도가 떨어질 수 있는 3장 서두에 위기 서사 보강 처방전을 제시했습니다.`);
+  }
+
+
+  /* ----------------------------------------------------
+     13. 각각의 박스 개별 글씨 크기 조절 엔진 (Individual Box Font Control)
+  ---------------------------------------------------- */
+  initPanelFontControllers() {
+    this.panelFontSizes = {
+      'panel-1': 11,
+      'panel-2': 11,
+      'panel-3': 13,
+      'panel-4': 11,
+      'panel-5': 13,
+      'panel-6': 11,
+      'panel-quick-tools': 11
+    };
+
+    // 로컬 스토리지에서 각 박스별 글씨 크기 불러오기
+    Object.keys(this.panelFontSizes).forEach(panelId => {
+      const saved = parseInt(localStorage.getItem(`bookengine_font_${panelId}`), 10);
+      if (saved && saved >= 8) {
+        this.panelFontSizes[panelId] = saved;
+      }
+      this.applyBoxFontSize(panelId, this.panelFontSizes[panelId]);
+    });
+
+    // 모든 박스별 글씨 확대/축소 버튼 이벤트 바인딩
+    document.querySelectorAll('.panel-font-widget').forEach(widget => {
+      const panelId = widget.dataset.panel;
+      const downBtn = widget.querySelector('.btn-box-font-down');
+      const upBtn = widget.querySelector('.btn-box-font-up');
+
+      downBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const current = this.panelFontSizes[panelId] || 11;
+        const next = Math.max(8, current - 1); // 최소 8pt 이상 보장
+        this.setBoxFontSize(panelId, next);
+      });
+
+      upBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const current = this.panelFontSizes[panelId] || 11;
+        const next = Math.min(24, current + 1);
+        this.setBoxFontSize(panelId, next);
+      });
+    });
+  }
+
+  setBoxFontSize(panelId, pt) {
+    const minPt = 8;
+    const finalPt = Math.max(minPt, pt);
+    this.panelFontSizes[panelId] = finalPt;
+    localStorage.setItem(`bookengine_font_${panelId}`, finalPt);
+    this.applyBoxFontSize(panelId, finalPt);
+    this.showToast(`[${this.getPanelDisplayName(panelId)}] 글씨 크기: ${finalPt}pt (최소 8pt 이상 보장)`);
+  }
+
+  applyBoxFontSize(panelId, pt) {
+    const px = Math.round(pt * 1.333 * 10) / 10;
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+
+    // 라벨 업데이트
+    const label = panel.querySelector(`.panel-font-widget[data-panel="${panelId}"] .box-font-label`);
+    if (label) label.textContent = `${pt}pt`;
+
+    if (panelId === 'panel-1') {
+      const el = document.getElementById('plan-doc-editor');
+      if (el) {
+        el.style.fontSize = `${px}px`;
+        el.style.lineHeight = '1.8';
+      }
+    } else if (panelId === 'panel-2') {
+      const el = document.getElementById('toc-tree');
+      if (el) {
+        el.style.fontSize = `${px}px`;
+        el.querySelectorAll('*').forEach(c => c.style.fontSize = `${px}px`);
+      }
+    } else if (panelId === 'panel-3') {
+      const el = document.getElementById('raw-editor');
+      if (el) {
+        el.style.fontSize = `${px}px`;
+        el.style.lineHeight = '1.85';
+      }
+    } else if (panelId === 'panel-4') {
+      const el = document.getElementById('working-toc-tree');
+      if (el) {
+        el.style.fontSize = `${px}px`;
+        el.querySelectorAll('.working-ch-title, span, div').forEach(c => {
+          if (!c.classList.contains('fa-solid')) c.style.fontSize = `${px}px`;
+        });
+      }
+    } else if (panelId === 'panel-5') {
+      const ed = document.getElementById('processed-editor');
+      const st = document.getElementById('processed-styled-view');
+      document.documentElement.style.setProperty('--editor-font-size', `${px}px`);
+      if (ed) {
+        ed.style.fontSize = `${px}px`;
+        ed.style.lineHeight = '1.85';
+      }
+      if (st) {
+        st.style.fontSize = `${px}px`;
+        st.style.lineHeight = '1.88';
+      }
+      document.querySelectorAll('.btn-font-size').forEach(btn => {
+        const bPt = parseInt(btn.dataset.pt, 10);
+        if (bPt === pt) {
+          btn.className = 'btn-font-size px-1.5 py-0.5 rounded bg-amber-600 text-white font-bold text-[11px] shadow-xs';
+        } else {
+          btn.className = 'btn-font-size px-1.5 py-0.5 rounded border border-stone-300 text-[11px] hover:bg-amber-100 hover:text-amber-900';
+        }
+      });
+    } else if (panelId === 'panel-6') {
+      const msgs = document.getElementById('chat-messages');
+      const inp = document.getElementById('chat-input');
+      if (msgs) msgs.style.fontSize = `${px}px`;
+      if (inp) inp.style.fontSize = `${px}px`;
+    } else if (panelId === 'panel-quick-tools') {
+      const container = panel.querySelector('.overflow-y-auto');
+      if (container) container.style.fontSize = `${px}px`;
+    }
+  }
+
+  getPanelDisplayName(panelId) {
+    const names = {
+      'panel-1': '1열 완전기획서',
+      'panel-2': '2열 기준목차',
+      'panel-3': '3열 원본 데이터',
+      'panel-4': '4열 수정목차',
+      'panel-5': '5열 수정본문',
+      'panel-6': '6열 AI 스튜디오',
+      'panel-quick-tools': '7열 거장 툴킷'
+    };
+    return names[panelId] || '박스';
   }
 
   showToast(msg) {
