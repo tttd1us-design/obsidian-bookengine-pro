@@ -10,6 +10,7 @@ class BookEngine {
     this.viewMode = 'text';
     this.currentModel = 'tri-orchestra';
     this.defaultWidths = [170, 150, 190, 210, 360, 400, 290];
+    this.currentFontSizePt = 12;
 
     this.chatMessages = [
       {
@@ -58,8 +59,16 @@ class BookEngine {
     this.initResizers();
     this.loadPanelWidths();
     this.analyzeManuscriptAndPopulate(this.rawText, false);
-    // 기본 모드를 널찍하고 눈 편한 3단 집필 스튜디오 모드로 활성화
+    // 기본 모드를 중간 원본 및 수정목차/수정본문 스튜디오 모드로 활성화
     this.setMode('studio');
+
+    // 최소 8pt 이상 글씨 크기 초기화
+    const savedFontPt = parseInt(localStorage.getItem('bookengine_font_size_pt'), 10);
+    if (savedFontPt && savedFontPt >= 8) {
+      this.setFontSize(savedFontPt);
+    } else {
+      this.setFontSize(12);
+    }
   }
 
   /* ----------------------------------------------------
@@ -264,8 +273,8 @@ class BookEngine {
     const btnStudio = document.getElementById('btn-mode-studio');
     const btnB5Proof = document.getElementById('btn-mode-b5proof');
 
-    const defaultBtnClass = 'px-2.5 py-1 rounded-lg text-stone-400 hover:text-white transition-all flex items-center gap-1.5';
-    const activeBtnClass = 'px-3 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold shadow-md ring-1 ring-amber-400/50 flex items-center gap-1.5 transition-all';
+    const defaultBtnClass = 'px-2.5 py-1 rounded-lg text-stone-400 hover:text-white transition-all flex items-center gap-1.5 text-xs';
+    const activeBtnClass = 'px-3 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold shadow-md ring-1 ring-amber-400/50 flex items-center gap-1.5 transition-all text-xs';
 
     [btnCockpit, btnStudio, btnB5Proof].forEach(b => {
       if (b) b.className = defaultBtnClass;
@@ -276,6 +285,7 @@ class BookEngine {
     const p3 = document.getElementById('panel-3');
     const r1 = document.querySelector('.col-resizer[data-target="panel-1"]');
     const r2 = document.querySelector('.col-resizer[data-target="panel-2"]');
+    const r3 = document.querySelector('.col-resizer[data-target="panel-3"]');
     const zoneDiv = document.querySelector('.zone-divider');
     const p4 = document.getElementById('panel-4');
     const p5 = document.getElementById('panel-5');
@@ -284,45 +294,111 @@ class BookEngine {
 
     if (mode === 'studio') {
       if (btnStudio) btnStudio.className = activeBtnClass;
-      // 1, 2, 3열 및 경계선 숨김 -> 눈 편한 3단 집중 집필
-      [p1, p2, p3, r1, r2, zoneDiv].forEach(el => {
+      // 1, 2열 숨김 (상단 버튼으로 필요시 언제든 펼침)
+      [p1, p2, r1].forEach(el => {
         if (el) el.style.display = 'none';
       });
+
+      // 3열 중간 원본 데이터: 항상 명확히 표시
+      if (p3) {
+        p3.style.display = 'flex';
+        p3.style.width = '300px';
+        p3.style.flex = '0 0 300px';
+      }
+      if (r2) r2.style.display = 'none';
+      if (zoneDiv) zoneDiv.style.display = '';
+
+      // 4열 수정목차: 마우스 실시간 이동 연동
       if (p4) {
         p4.style.display = 'flex';
         p4.style.width = '240px';
         p4.style.flex = '0 0 240px';
       }
+
+      // 5열 수정본문: 최적의 너비와 유연성
       if (p5) {
         p5.style.display = 'flex';
         p5.style.flex = '1 1 0%';
         p5.style.width = 'auto';
-        p5.style.minWidth = '520px';
+        p5.style.minWidth = '460px';
       }
+
+      // 6열 AI 스튜디오
       if (p6) {
         p6.style.display = 'flex';
-        p6.style.width = '420px';
-        p6.style.flex = '0 0 420px';
+        p6.style.width = '380px';
+        p6.style.flex = '0 0 380px';
       }
+
+      // 7열 자주 사용하는 기능
       if (p7) {
         p7.style.display = 'flex';
         p7.style.width = '280px';
         p7.style.flex = '0 0 280px';
       }
-      this.showToast('✍️ 집필 스튜디오 모드: 1~3열을 접고 널찍한 황금 집필 공간을 확보했습니다.');
+
+      this.showToast('✍️ [중간 원본 데이터] ╎ [수정목차] ╎ [수정본문] 중심 최적 배치가 활성화되었습니다.');
     } else if (mode === 'cockpit') {
       if (btnCockpit) btnCockpit.className = activeBtnClass;
-      // 1~7열 모두 표시
-      [p1, p2, p3, r1, r2, zoneDiv].forEach(el => {
+      // 1~7열 모두 표시 (중간에 원본, 우측에 수정목차/수정본문)
+      [p1, p2, p3, r1, r2, zoneDiv, p4, p5, p6, p7].forEach(el => {
         if (el) el.style.display = '';
       });
-      this.applyWidths([180, 160, 200, 220, 380, 420, 280]);
+      this.applyWidths([170, 160, 270, 220, 420, 380, 280]);
       this.showToast('🖥️ 전체 관제탑 모드: 1~7열 전체 파이프라인을 조망합니다.');
     } else if (mode === 'b5proof') {
       if (btnB5Proof) btnB5Proof.className = activeBtnClass;
       this.openB5Modal();
       this.showToast('📖 신국판 B5 출판사 제출용 실물 조판 뷰어를 호출했습니다.');
     }
+  }
+
+  toggleRefPanels() {
+    const p1 = document.getElementById('panel-1');
+    const p2 = document.getElementById('panel-2');
+    const r1 = document.querySelector('.col-resizer[data-target="panel-1"]');
+    const btn = document.getElementById('btn-toggle-ref-panels');
+    if (!p1 || !p2) return;
+
+    const isHidden = (p1.style.display === 'none' || getComputedStyle(p1).display === 'none');
+    if (isHidden) {
+      p1.style.display = 'flex';
+      p1.style.width = '190px';
+      p1.style.flex = '0 0 190px';
+      p2.style.display = 'flex';
+      p2.style.width = '170px';
+      p2.style.flex = '0 0 170px';
+      if (r1) r1.style.display = '';
+      if (btn) btn.className = 'px-2.5 py-1 text-xs rounded-lg bg-purple-900 text-white border border-purple-500 font-bold shadow-xs flex items-center gap-1.5';
+      this.showToast('1열 기획서 및 2열 기준목차가 펼쳐졌습니다.');
+    } else {
+      p1.style.display = 'none';
+      p2.style.display = 'none';
+      if (r1) r1.style.display = 'none';
+      if (btn) btn.className = 'px-2.5 py-1 text-xs rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-300 border border-stone-700 transition-colors font-medium flex items-center gap-1.5';
+      this.showToast('1열 기획서 및 2열 기준목차가 접혔습니다. (중간 원본 & 수정목차/수정본문 집중)');
+    }
+  }
+
+  setFontSize(pt) {
+    const minPt = 8; // 최소 8이상 규격 엄수
+    const targetPt = Math.max(minPt, pt);
+    this.currentFontSizePt = targetPt;
+
+    const px = Math.round(targetPt * 1.333 * 10) / 10;
+    document.documentElement.style.setProperty('--editor-font-size', `${px}px`);
+
+    document.querySelectorAll('.btn-font-size').forEach(btn => {
+      const bPt = parseInt(btn.dataset.pt, 10);
+      if (bPt === targetPt) {
+        btn.className = 'btn-font-size px-1.5 py-0.5 rounded bg-amber-600 text-white font-bold text-[11px] shadow-xs';
+      } else {
+        btn.className = 'btn-font-size px-1.5 py-0.5 rounded border border-stone-300 text-[11px] hover:bg-amber-100 hover:text-amber-900';
+      }
+    });
+
+    localStorage.setItem('bookengine_font_size_pt', targetPt);
+    this.showToast(`글씨 크기: ${targetPt}pt (${px}px, 최소 8pt 이상)로 설정되었습니다.`);
   }
 
   setPreset(presetType) {
@@ -753,6 +829,23 @@ class BookEngine {
     document.getElementById('btn-mode-cockpit')?.addEventListener('click', () => this.setMode('cockpit'));
     document.getElementById('btn-mode-studio')?.addEventListener('click', () => this.setMode('studio'));
     document.getElementById('btn-mode-b5proof')?.addEventListener('click', () => this.setMode('b5proof'));
+    // 1·2열 기획서/기준목차 접기/펼치기 토글
+    document.getElementById('btn-toggle-ref-panels')?.addEventListener('click', () => this.toggleRefPanels());
+
+    // 글씨 크기 조절 버튼 (최소 8pt 이상)
+    document.querySelectorAll('.btn-font-size').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const pt = parseInt(e.currentTarget.dataset.pt, 10);
+        if (pt) this.setFontSize(pt);
+      });
+    });
+    document.getElementById('btn-font-minus')?.addEventListener('click', () => {
+      this.setFontSize(Math.max(8, this.currentFontSizePt - 1));
+    });
+    document.getElementById('btn-font-plus')?.addEventListener('click', () => {
+      this.setFontSize(Math.min(24, this.currentFontSizePt + 1));
+    });
+
 
     // 3단계 초안 구조화 AI 엔진 버튼 바
     document.getElementById('btn-linter-clean')?.addEventListener('click', () => this.runLinterClean());
@@ -953,13 +1046,13 @@ class BookEngine {
         panel.classList.remove('is-collapsed');
         panel.style.width = '290px';
         panel.style.flex = '0 0 290px';
-        if (btn) btn.innerHTML = '<i class="fa-solid fa-chevron-right text-[10px]"></i>';
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-chevron-right text-xs"></i>';
         this.showToast('자주 사용하는 기능 패널이 펼쳐졌습니다.');
       } else {
         panel.classList.add('is-collapsed');
         panel.style.width = '48px';
         panel.style.flex = '0 0 48px';
-        if (btn) btn.innerHTML = '<i class="fa-solid fa-chevron-left text-[10px]"></i>';
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-chevron-left text-xs"></i>';
         this.showToast('자주 사용하는 기능 패널이 최소화되었습니다.');
       }
       this.savePanelWidths();
@@ -1097,8 +1190,8 @@ class BookEngine {
 
     const statusBadge = document.getElementById('ai-agent-status');
     if (statusBadge) {
-      statusBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[9px] mr-1"></i>AI 편집 연산 중...';
-      statusBadge.className = 'px-1.5 py-0.5 rounded bg-amber-900 text-amber-300 text-[8px] font-semibold border border-amber-700 shrink-0 flex items-center';
+      statusBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[11px] mr-1"></i>AI 편집 연산 중...';
+      statusBadge.className = 'px-1.5 py-0.5 rounded bg-amber-900 text-amber-300 text-[11px] font-semibold border border-amber-700 shrink-0 flex items-center';
     }
 
     setTimeout(() => {
@@ -1208,7 +1301,7 @@ class BookEngine {
 
       if (statusBadge) {
         statusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse mr-1"></span>편집 대기 중';
-        statusBadge.className = 'px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 text-[8px] font-semibold border border-emerald-800/60 shrink-0 flex items-center';
+        statusBadge.className = 'px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 text-[11px] font-semibold border border-emerald-800/60 shrink-0 flex items-center';
       }
 
       this.chatMessages.push({
@@ -1236,17 +1329,17 @@ class BookEngine {
 
       item.innerHTML = '<div class="flex items-center justify-between gap-1">' +
         '<div class="flex items-center gap-1.5 truncate flex-1">' +
-        '<span class="w-4 h-4 rounded bg-blue-100 text-blue-800 text-[9px] font-bold flex items-center justify-center shrink-0">' + (idx + 1) + '</span>' +
+        '<span class="w-4 h-4 rounded bg-blue-100 text-blue-800 text-[11px] font-bold flex items-center justify-center shrink-0">' + (idx + 1) + '</span>' +
         '<input type="checkbox" class="rounded text-blue-600 focus:ring-0 cursor-pointer chk-complete" ' + (sec.completed ? 'checked' : '') + ' />' +
         '<input type="text" value="' + sec.title + '" class="working-ch-title w-full bg-transparent font-bold text-stone-800 focus:bg-blue-100/60 focus:outline-none focus:ring-1 focus:ring-blue-400 rounded px-1 py-0.5 text-[11px]" />' +
         '</div>' +
         '<div class="flex items-center gap-0.5 shrink-0">' +
-        (idx > 0 ? '<button class="btn-move-up text-stone-400 hover:text-blue-600 px-1 text-[9px]" title="위로 이동"><i class="fa-solid fa-arrow-up"></i></button>' : '') +
-        (idx < this.workingSections.length - 1 ? '<button class="btn-move-down text-stone-400 hover:text-blue-600 px-1 text-[9px]" title="아래로 이동"><i class="fa-solid fa-arrow-down"></i></button>' : '') +
-        '<button class="btn-del-ch text-stone-400 hover:text-rose-600 px-1 text-[10px]" title="챕터 삭제"><i class="fa-solid fa-xmark"></i></button>' +
+        (idx > 0 ? '<button class="btn-move-up text-stone-400 hover:text-blue-600 px-1 text-[11px]" title="위로 이동"><i class="fa-solid fa-arrow-up"></i></button>' : '') +
+        (idx < this.workingSections.length - 1 ? '<button class="btn-move-down text-stone-400 hover:text-blue-600 px-1 text-[11px]" title="아래로 이동"><i class="fa-solid fa-arrow-down"></i></button>' : '') +
+        '<button class="btn-del-ch text-stone-400 hover:text-rose-600 px-1 text-xs" title="챕터 삭제"><i class="fa-solid fa-xmark"></i></button>' +
         '</div>' +
         '</div>' +
-        '<div class="flex items-center justify-between text-[9px] text-stone-400 pl-5">' +
+        '<div class="flex items-center justify-between text-[11px] text-stone-400 pl-5">' +
         '<span>인과: <b class="text-stone-600">' + (sec.phase || '본문') + '</b></span>' +
         '<span class="text-blue-700 font-mono font-bold">' + (sec.content ? sec.content.length : 0).toLocaleString() + '자</span>' +
         '</div>';
@@ -1408,10 +1501,10 @@ class BookEngine {
       const badgeClass = this.getPhaseBadgeClass(item.phase);
 
       li.innerHTML = '<div class="flex items-center gap-1.5 truncate flex-1">' +
-        '<span class="w-4 h-4 rounded bg-stone-100 text-stone-500 font-mono text-[9px] flex items-center justify-center shrink-0">' + (index + 1) + '</span>' +
+        '<span class="w-4 h-4 rounded bg-stone-100 text-stone-500 font-mono text-[11px] flex items-center justify-center shrink-0">' + (index + 1) + '</span>' +
         '<span class="font-semibold text-stone-800 truncate">' + item.title + '</span>' +
         '</div>' +
-        '<span class="text-[9px] px-1 py-0.2 rounded shrink-0 ' + badgeClass + '">' + item.phase + '</span>';
+        '<span class="text-[11px] px-1 py-0.2 rounded shrink-0 ' + badgeClass + '">' + item.phase + '</span>';
 
       li.addEventListener('click', () => {
         this.scrollToChapter(item.title);
@@ -1422,30 +1515,56 @@ class BookEngine {
   }
 
   scrollToChapter(title) {
-    const editor = document.getElementById('processed-editor');
-    if (!editor) return;
-    const text = editor.value;
     const cleanTitle = title.replace(/\s+/g, '');
-    
-    const lines = text.split('\n');
-    let lineIdx = -1;
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].includes('## ') && (lines[i].replace(/\s+/g, '').includes(cleanTitle) || cleanTitle.includes(lines[i].replace(/[#\s]/g, '')))) {
-        lineIdx = i;
-        break;
+
+    // 1. 원고 에디터 텍스트 모드 스크롤 이동
+    const editor = document.getElementById('processed-editor');
+    if (editor && this.viewMode === 'text') {
+      const text = editor.value;
+      const lines = text.split('\n');
+      let lineIdx = -1;
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].includes('## ') && (lines[i].replace(/\s+/g, '').includes(cleanTitle) || cleanTitle.includes(lines[i].replace(/[#\s]/g, '')))) {
+          lineIdx = i;
+          break;
+        }
+      }
+
+      if (lineIdx !== -1) {
+        const charPos = lines.slice(0, lineIdx).join('\n').length;
+        editor.focus();
+        editor.setSelectionRange(charPos, charPos + lines[lineIdx].length);
+        const lineHeight = parseInt(getComputedStyle(editor).lineHeight, 10) || 24;
+        editor.scrollTop = Math.max(0, (lineIdx - 2) * lineHeight);
       }
     }
 
-    if (lineIdx !== -1) {
-      const charPos = lines.slice(0, lineIdx).join('\n').length;
-      editor.focus();
-      editor.setSelectionRange(charPos, charPos + lines[lineIdx].length);
-      const lineHeight = 18;
-      editor.scrollTop = lineIdx * lineHeight;
-      this.showToast('"' + title + '" 챕터로 이동했습니다.');
-    } else {
-      this.showToast('본문에서 해당 챕터 위치를 탐색 중입니다.');
+    // 2. B5 조판 프리뷰 모드 스크롤 이동 & 골든 하이라이트
+    const styledView = document.getElementById('processed-styled-view');
+    if (styledView && this.viewMode === 'styled') {
+      const headings = styledView.querySelectorAll('h1, h2, h3');
+      for (const h of headings) {
+        if (h.textContent.replace(/\s+/g, '').includes(cleanTitle) || cleanTitle.includes(h.textContent.replace(/\s+/g, ''))) {
+          h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          h.classList.add('ring-4', 'ring-amber-500', 'bg-amber-100', 'rounded', 'p-1', 'transition-all', 'duration-500');
+          setTimeout(() => {
+            h.classList.remove('ring-4', 'ring-amber-500', 'bg-amber-100', 'rounded', 'p-1');
+          }, 1500);
+          break;
+        }
+      }
     }
+
+    // 3. 목차 활성 하이라이트 표시
+    document.querySelectorAll('#working-toc-tree .toc-item-drag').forEach(card => {
+      if (card.textContent.includes(title)) {
+        card.classList.add('toc-item-active');
+      } else {
+        card.classList.remove('toc-item-active');
+      }
+    });
+
+    this.showToast('"' + title + '" 챕터로 본문이 이동했습니다.');
   }
 
   getPhaseBadgeClass(phase) {
@@ -1777,7 +1896,7 @@ class BookEngine {
         html += `<li class="ml-4 text-xs text-stone-800 leading-relaxed list-disc">${item}</li>`;
       } else {
         const formatted = trimmed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        html += `<p class="text-stone-800 leading-relaxed indent-4 mb-2.5 font-serif text-[12px] text-justify">${formatted}</p>`;
+        html += `<p class="text-stone-800 leading-relaxed indent-4 mb-2.5 font-serif text-justify" style="font-size: var(--editor-font-size, 15px); line-height: 1.88;">${formatted}</p>`;
       }
     }
 
@@ -1804,7 +1923,7 @@ class BookEngine {
       wrapper.className = 'flex flex-col ' + (isUser ? 'items-end' : 'items-start') + ' gap-1 text-[11px]';
 
       if (isUser) {
-        wrapper.innerHTML = '<div class="flex items-center gap-1 text-[9px] text-stone-400">' +
+        wrapper.innerHTML = '<div class="flex items-center gap-1 text-[11px] text-stone-400">' +
           '<span>저자</span><span>•</span><span>' + msg.time + '</span>' +
           '</div>' +
           '<div class="bg-amber-600 text-white rounded-xl rounded-tr-none px-3 py-2 max-w-[90%] shadow-xs leading-relaxed">' +
@@ -1813,17 +1932,17 @@ class BookEngine {
       } else {
         let thoughtHtml = '';
         if (msg.thought) {
-          thoughtHtml = '<div class="bg-stone-900/90 text-amber-300 font-mono text-[9px] p-2 rounded-lg border border-amber-900/40 mb-1 leading-relaxed whitespace-pre-wrap">' +
-            '<div class="flex items-center gap-1 text-stone-400 mb-1 font-sans font-bold text-[8px] uppercase tracking-wider">' +
+          thoughtHtml = '<div class="bg-stone-900/90 text-amber-300 font-mono text-[11px] p-2 rounded-lg border border-amber-900/40 mb-1 leading-relaxed whitespace-pre-wrap">' +
+            '<div class="flex items-center gap-1 text-stone-400 mb-1 font-sans font-bold text-[11px] uppercase tracking-wider">' +
             '<i class="fa-solid fa-brain text-amber-400"></i> AI 심층 편집 사고 흐름 (Chain of Thought)' +
             '</div>' +
             msg.thought +
             '</div>';
         }
 
-        const modelTag = msg.model ? `<span class="bg-stone-200 text-stone-700 text-[8px] px-1 py-0.2 rounded font-mono font-semibold">${msg.model}</span>` : '';
+        const modelTag = msg.model ? `<span class="bg-stone-200 text-stone-700 text-[11px] px-1 py-0.2 rounded font-mono font-semibold">${msg.model}</span>` : '';
 
-        wrapper.innerHTML = '<div class="flex items-center gap-1 text-[9px] text-stone-500">' +
+        wrapper.innerHTML = '<div class="flex items-center gap-1 text-[11px] text-stone-500">' +
           '<span class="font-bold text-stone-800">AI 수석편집장</span>' + modelTag + '<span>•</span><span>' + msg.time + '</span>' +
           '</div>' +
           thoughtHtml +
